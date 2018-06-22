@@ -25,6 +25,9 @@
 #define VP_HALFHEIGHT 20.0f
 #define GRID_SIZE 20 // must be an even number
 
+#define FLOOR_SCALE 60.f
+#define WALKING_SPACE FLOOR_SCALE/2-2.5f	//行走範圍
+
 
 // For Model View and Projection Matrix
 mat4 g_mxModelView(1.0f);
@@ -43,6 +46,13 @@ CObjReader	  *g_pGemGarden;
 GLfloat g_fRadius = 8.0;
 GLfloat g_fTheta = 45.0f*DegreesToRadians;
 GLfloat g_fPhi = 45.0f*DegreesToRadians;
+GLfloat g_fCameraMoveX = 0.f;				// for camera movment
+GLfloat g_fCameraMoveY = 7.0f;				// for camera movment
+GLfloat g_fCameraMoveZ = 0.f;				// for camera movment
+mat4	g_matMoveDir;		// 鏡頭移動方向
+point4  g_MoveDir;
+point4  g_at;				// 鏡頭觀看方向
+point4  g_eye;				// 鏡頭位置
 
 //----------------------------------------------------------------------------
 // Part 2 : for single light source
@@ -96,22 +106,23 @@ void init( void )
 	camera->updatePerspective(60.0, (GLfloat)SCREEN_SIZE / (GLfloat)SCREEN_SIZE, 1.0, 1000.0);
 
 	auto texturepool = CTexturePool::create();
-	g_uiFTexID[0] = texturepool->AddTexture("texture/checker.png");
-	g_uiFTexID[1] = texturepool->AddTexture("texture/Masonry.Brick.png");
+	g_uiFTexID[0] = texturepool->AddTexture("texture/DiffuseMap/stone-tile-1.png");		//floor
+	g_uiFTexID[1] = texturepool->AddTexture("texture/NormalMap/stone-tile-1_NRM.png");
+	g_uiFTexID[2] = texturepool->AddTexture("texture/Masonry.Brick.png");
 	g_uiFTexID[3] = texturepool->AddTexture("texture/metal.png");
 	g_uiFTexID[4] = texturepool->AddTexture("texture/Masonry.Brick.normal.png");
-#ifdef MULTITEXTURE
-	g_uiFTexID[2] = texturepool->AddTexture("texture/lightMap1.png");
-#endif
+	
 	g_uiSphereCubeMap = CubeMap_load_SOIL();
 
 	// 產生物件的實體	
 	g_pFloor = new CQuad;
 #ifdef MULTITEXTURE
-	g_pFloor->SetTextureLayer(DIFFUSE_MAP | LIGHT_MAP);
+	g_pFloor->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
 #endif
 	g_pFloor->SetShader();
-	g_pFloor->SetTRSMatrix(Scale(15,1,15));
+	vS.x = vS.y = vS.z = FLOOR_SCALE;				//Scale
+	mxS = Scale(vS);
+	g_pFloor->SetTRSMatrix(mxS);
 	g_pFloor->SetShadingMode(GOURAUD_SHADING);
 	g_pFloor->SetTiling(10,10);
 	// 設定貼圖
@@ -168,7 +179,7 @@ void init( void )
 	g_pGemToy->SetMaterials(vec4(0), vec4(0, 0, 0.85f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	g_pGemToy->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
 	g_pGemToy->SetShader();
-	vT.x = -6.0f; vT.y = 1.0f; vT.z = 0.0f;	//Location
+	vT.x = -6.0f; vT.y = 0.0f; vT.z = 0.0f;	//Location
 	mxT = Translate(vT);
 	vS.x = vS.y = vS.z = 0.5f;				//Scale
 	mxS = Scale(vS);
@@ -176,12 +187,12 @@ void init( void )
 	g_pGemToy->SetShadingMode(GOURAUD_SHADING);
 
 	//-----------------------------------------
-	g_pGemGarden = new CObjReader("obj/gem_garden.obj");		//紫水晶
+	g_pGemGarden = new CObjReader("obj/gem_garden.obj");		//綠水晶
 	// materials
-	g_pGemGarden->SetMaterials(vec4(0), vec4(0.85f, 0.0f, 0.85f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pGemGarden->SetMaterials(vec4(0), vec4(0.f, 0.85f, 0.f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	g_pGemGarden->SetKaKdKsShini(0.15f, 0.95f, 0.8f, 5);
 	g_pGemGarden->SetShader();
-	vT.x = 6.0f; vT.y = 1.0f; vT.z = 6.0f;	//Location
+	vT.x = 6.0f; vT.y = 1.2f; vT.z = 6.0f;	//Location
 	mxT = Translate(vT);
 	vS.x = vS.y = vS.z = 0.5f;				//Scale
 	mxS = Scale(vS);
@@ -227,14 +238,14 @@ void GL_Display( void )
 #else 
 	glActiveTexture(GL_TEXTURE0); // select active texture 0
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[0]); // 與 Diffuse Map 結合
-	glActiveTexture(GL_TEXTURE1); // select active texture 1
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[2]); // 與 Light Map 結合
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[1]);
 	g_pFloor->Draw();
 	glActiveTexture(GL_TEXTURE0);
 //  glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[1]);
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[2]);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[4]);
 	g_pCube->Draw();
@@ -279,6 +290,16 @@ void UpdateLightPosition(float dt)
 
 void onFrameMove(float delta)
 {
+	// for camera
+	g_at = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi) + g_fCameraMoveX,
+		g_fRadius*cos(g_fTheta) + g_fCameraMoveY,
+		g_fRadius*sin(g_fTheta)*cos(g_fPhi) + g_fCameraMoveZ,
+		1.0f);
+	g_eye = vec4(g_fCameraMoveX, g_fCameraMoveY, g_fCameraMoveZ, 1.0f);	//第一人稱視角
+	auto camera = CCamera::getInstance();
+	camera->updateViewLookAt(g_eye, g_at);
+
+	//---------------------------------------------------------------
 
 	if( g_bAutoRotating ) { // Part 2 : 重新計算 Light 的位置
 		UpdateLightPosition(delta);
@@ -286,7 +307,7 @@ void onFrameMove(float delta)
 
 	mat4 mvx;	// view matrix & projection matrix
 	bool bVDirty;	// view 與 projection matrix 是否需要更新給物件
-	auto camera = CCamera::getInstance();
+	//auto camera = CCamera::getInstance();
 	mvx = camera->getViewMatrix(bVDirty);
 	if (bVDirty) {
 		g_pFloor->SetViewMatrix(mvx);
@@ -319,14 +340,77 @@ void Win_Keyboard( unsigned char key, int x, int y )
 {
     switch ( key ) {
 	case  SPACE_KEY:
-
-		break;
-//----------------------------------------------------------------------------
-// Part 2 : for single light source
-	case 65: // A key
-	case 97: // a key
 		g_bAutoRotating = !g_bAutoRotating;
 		break;
+//----------------------------------------------------------------------------
+
+	// ---------- for camera movment -----------
+	case 'W':
+	case 'w':
+		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+		g_MoveDir = normalize(g_MoveDir);
+		g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+		if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+			g_fCameraMoveX += (g_matMoveDir._m[0][3] * 0.2f);
+			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * 0.2f);
+		}
+		else {	// 修正卡牆
+			if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+			else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+			if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+			else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+		}
+		break;
+	case 'S':
+	case 's':
+		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+		g_MoveDir = normalize(g_MoveDir);
+		g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+		if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * 0.2f);
+			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * 0.2f);
+		}
+		else {	// 修正卡牆
+			if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+			else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+			if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+			else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+		}
+		break;
+	case 'A':
+	case 'a':
+		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+		g_MoveDir = normalize(g_MoveDir);
+		g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+		if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+			g_fCameraMoveX += (g_matMoveDir._m[0][3] * 0.2f);
+			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * 0.2f);
+		}
+		else {	// 修正卡牆
+			if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+			else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+			if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+			else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+		}
+		break;
+	case 'D':
+	case 'd':
+		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+		g_MoveDir = normalize(g_MoveDir);
+		g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+		if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * 0.2f);
+			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * 0.2f);
+		}
+		else {	// 修正卡牆
+			if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+			else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+			if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+			else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+		}
+		break;
+
+		// --------- for light color ---------
 	case 82: // R key
 		if( g_fLightR <= 0.95f ) g_fLightR += 0.05f;
 		g_Light1.diffuse.x = g_fLightR;
@@ -395,11 +479,65 @@ void Win_Mouse(int button, int state, int x, int y) {
 void Win_SpecialKeyboard(int key, int x, int y) {
 
 	switch(key) {
+		case GLUT_KEY_UP:		// 目前按下的是向上方向鍵
+			g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+			g_MoveDir = normalize(g_MoveDir);
+			g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+			if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+				g_fCameraMoveX += (g_matMoveDir._m[0][3] * 0.2f);
+				g_fCameraMoveZ += (g_matMoveDir._m[2][3] * 0.2f);
+			}
+			else {	// 修正卡牆
+				if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+				else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+				if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+				else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+			}
+			break;
+		case GLUT_KEY_DOWN:		// 目前按下的是向下方向鍵
+			g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+			g_MoveDir = normalize(g_MoveDir);
+			g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+			if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+				g_fCameraMoveX -= (g_matMoveDir._m[0][3] * 0.2f);
+				g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * 0.2f);
+			}
+			else {	// 修正卡牆
+				if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+				else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+				if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+				else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+			}
+			break;
 		case GLUT_KEY_LEFT:		// 目前按下的是向左方向鍵
-
+			g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+			g_MoveDir = normalize(g_MoveDir);
+			g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+			if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+				g_fCameraMoveX += (g_matMoveDir._m[0][3] * 0.2f);
+				g_fCameraMoveZ += (g_matMoveDir._m[2][3] * 0.2f);
+			}
+			else {	// 修正卡牆
+				if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+				else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+				if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+				else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+			}
 			break;
 		case GLUT_KEY_RIGHT:	// 目前按下的是向右方向鍵
-
+			g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
+			g_MoveDir = normalize(g_MoveDir);
+			g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
+			if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) {	//限制空間
+				g_fCameraMoveX -= (g_matMoveDir._m[0][3] * 0.2f);
+				g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * 0.2f);
+			}
+			else {	// 修正卡牆
+				if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
+				else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
+				if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
+				else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
+			}
 			break;
 		default:
 			break;
@@ -409,21 +547,24 @@ void Win_SpecialKeyboard(int key, int x, int y) {
 //----------------------------------------------------------------------------
 // The passive motion callback for a window is called when the mouse moves within the window while no mouse buttons are pressed.
 void Win_PassiveMotion(int x, int y) {
-
-	g_fPhi = (float)-M_PI*(x - HALF_SIZE)/(HALF_SIZE); // 轉換成 g_fPhi 介於 -PI 到 PI 之間 (-180 ~ 180 之間)
-	g_fTheta = (float)M_PI*(float)y/SCREEN_SIZE;
-	point4  eye(g_fRadius*sin(g_fTheta)*sin(g_fPhi), g_fRadius*cos(g_fTheta), g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.0f);
-	point4  at(0.0f, 0.0f, 0.0f, 1.0f);
-	CCamera::getInstance()->updateViewLookAt(eye, at);
+	g_fPhi = (float)M_PI*(x - HALF_SIZE) / (HALF_SIZE); // 轉換成 g_fPhi 介於 -PI 到 PI 之間 (-180 ~ 180 之間)
+	g_fTheta = (float)-M_PI*(float)y / SCREEN_SIZE;
+	//g_fPhi = (float)-M_PI*(x - HALF_SIZE)/(HALF_SIZE); // 轉換成 g_fPhi 介於 -PI 到 PI 之間 (-180 ~ 180 之間)
+	//g_fTheta = (float)M_PI*(float)y/SCREEN_SIZE;
+	//point4  eye(g_fRadius*sin(g_fTheta)*sin(g_fPhi), g_fRadius*cos(g_fTheta), g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.0f);
+	//point4  at(0.0f, 0.0f, 0.0f, 1.0f);
+	//CCamera::getInstance()->updateViewLookAt(eye, at);
 }
 
 // The motion callback for a window is called when the mouse moves within the window while one or more mouse buttons are pressed.
 void Win_MouseMotion(int x, int y) {
-	g_fPhi = (float)-M_PI*(x - HALF_SIZE)/(HALF_SIZE);  // 轉換成 g_fPhi 介於 -PI 到 PI 之間 (-180 ~ 180 之間)
-	g_fTheta = (float)M_PI*(float)y/SCREEN_SIZE;;
-	point4  eye(g_fRadius*sin(g_fTheta)*sin(g_fPhi), g_fRadius*cos(g_fTheta), g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.0f);
-	point4  at(0.0f, 0.0f, 0.0f, 1.0f);
-	CCamera::getInstance()->updateViewLookAt(eye, at);
+	g_fPhi = (float)M_PI*(x - HALF_SIZE) / (HALF_SIZE); // 轉換成 g_fPhi 介於 -PI 到 PI 之間 (-180 ~ 180 之間)
+	g_fTheta = (float)-M_PI*(float)y / SCREEN_SIZE;
+	//g_fPhi = (float)-M_PI*(x - HALF_SIZE)/(HALF_SIZE);  // 轉換成 g_fPhi 介於 -PI 到 PI 之間 (-180 ~ 180 之間)
+	//g_fTheta = (float)M_PI*(float)y/SCREEN_SIZE;;
+	//point4  eye(g_fRadius*sin(g_fTheta)*sin(g_fPhi), g_fRadius*cos(g_fTheta), g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.0f);
+	//point4  at(0.0f, 0.0f, 0.0f, 1.0f);
+	//CCamera::getInstance()->updateViewLookAt(eye, at);
 }
 //----------------------------------------------------------------------------
 void GL_Reshape(GLsizei w, GLsizei h)

@@ -8,57 +8,112 @@ CObjReader::CObjReader(char *objfile)
 {
 	FILE *pfile;
 	char pLineHead[20];
-	int face[3][3]; //讀取用
-	int ivec, ifaces, inormal;	//點、面、法向量數紀錄
-	ifaces = ivec = inormal = 0;
+	int face[3][3];					//讀取用
+	int ivec, inormal, iuv, ifaces;	//點、法向量、貼圖、面數紀錄
+	ifaces = ivec = inormal = iuv = 0;
 
 	if ((pfile = fopen(objfile, "r")) == NULL) {
 		printf("obj file can't open."); system("pause");
 	}
-	while (!feof(pfile)) { //是否到檔案尾
-		fscanf(pfile, "%s", pLineHead); //讀取字串
-		if (strcmp(pLineHead, "v") == 0) ivec++; //讀取point
-		else if (strcmp(pLineHead, "vn") == 0) inormal++; //讀取normal
-		else if (strcmp(pLineHead, "f") == 0) ifaces++; //讀取face
+	while (!feof(pfile)) { //是否到檔案尾									//--------第一次讀檔，紀錄欲開空間大小--------//
+		fscanf(pfile, "%s", pLineHead);						//讀取字串
+		if (strcmp(pLineHead, "v") == 0) ivec++;			//讀取point
+		else if (strcmp(pLineHead, "vn") == 0) inormal++;	//讀取normal
+		else if (strcmp(pLineHead, "vt") == 0) iuv++;		//讀取texture
+		else if (strcmp(pLineHead, "f") == 0) ifaces++;		//讀取face
 	}
 
-	m_iNumVtx = ifaces * 3;	//點數
-	m_pPoints = NULL; m_pNormals = NULL; m_pTex1 = NULL;
+	m_iNumVtx = ifaces * 3;				//點數
+	m_pPoints = NULL; m_pNormals = NULL;
+	m_pTex1 = NULL; m_pTex2 = NULL; m_pTex3 = NULL;
 
 	m_pPoints = new vec4[m_iNumVtx];	//使用點
 	m_pNormals = new vec3[m_iNumVtx];	//Normal
 	m_pColors = new vec4[m_iNumVtx];	//顏色
+	m_pTex1 = new vec2[m_iNumVtx];		//diffuse map
+#if MULTITEXTURE >= LIGHT_MAP
+	m_pTex2 = new vec2[m_iNumVtx];		// 產生 light map 所需的貼圖座標
+#endif
+#if MULTITEXTURE >= NORMAL_MAP
+	m_pTex3 = new vec2[m_iNumVtx];		// 產生 normal map 所需的貼圖座標
+	m_pTangentV = new vec3[m_iNumVtx];	// 儲存 Tangent Space Normal Map 的 Tangent vector
+#endif
 
 	_vec4Points = new vec4[ivec];		//資料點 (vec4)
-	_vec3Points = new vec3[inormal];	//法向量 (vec3)
+	_vec3Points_n = new vec3[inormal];	//法向量 (vec3)
+	_vec3Points_uv = new vec3[iuv];		//貼圖點 (vec2)
 
-	int pCount, vCount, nCount;
-	pCount = vCount = nCount = 0;
+	int pCount, vCount, nCount, uvCount;
+	pCount = vCount = nCount = uvCount = 0;
 	rewind(pfile);	//重新指到檔案頭
 
-	while (!feof(pfile)) { //是否到檔案尾
-		fscanf(pfile, "%s", pLineHead); //讀取字串
-		if (strcmp(pLineHead, "v") == 0) { //讀取vertex
+	while (!feof(pfile)) { //是否到檔案尾									//--------第二次讀檔，資料紀錄--------//
+		fscanf(pfile, "%s", pLineHead);			 //讀取字串
+		if (strcmp(pLineHead, "v") == 0) {		 //讀取vertex
 			fscanf(pfile, "%f %f %f", &_vec4Points[vCount].x, &_vec4Points[vCount].y, &_vec4Points[vCount].z); //讀取3點
 			_vec4Points[vCount].w = 1;
 			vCount++;
 		}
 		else if (strcmp(pLineHead, "vn") == 0) { //讀取normal
-			fscanf(pfile, "%f %f %f", &_vec3Points[nCount].x, &_vec3Points[nCount].y, &_vec3Points[nCount].z); //讀取3點
+			fscanf(pfile, "%f %f %f", &_vec3Points_n[nCount].x, &_vec3Points_n[nCount].y, &_vec3Points_n[nCount].z); //讀取3點
 			nCount++;
 		}
-		else if (strcmp(pLineHead, "f") == 0) { //讀取face
+		else if (strcmp(pLineHead, "vt") == 0) { //讀取texture
+			fscanf(pfile, "%f %f %f", &_vec3Points_uv[uvCount].x, &_vec3Points_uv[uvCount].y, &_vec3Points_uv[uvCount].z); //讀取3點
+			uvCount++;
+		}
+		else if (strcmp(pLineHead, "f") == 0) {	//讀取face
 			fscanf(pfile, "%d/%d/%d %d/%d/%d %d/%d/%d", &face[0][0], &face[0][1], &face[0][2],
 														&face[1][0], &face[1][1], &face[1][2],
-														&face[2][0], &face[2][1], &face[2][2]); //讀取face
+														&face[2][0], &face[2][1], &face[2][2]); //頂點v/貼圖vt(uv)/法線vn
 			for (int i = 0; i < 3; i++) {
-				m_pPoints[pCount + i] = _vec4Points[face[i][0] - 1];	// 讀取頂點
-				m_pNormals[pCount + i] = _vec3Points[face[i][2] - 1];	// 讀取Normal
+				m_pPoints[pCount + i] = _vec4Points[face[i][0] - 1];		// 讀取頂點
+				m_pNormals[pCount + i] = _vec3Points_n[face[i][2] - 1];		// 讀取Normal
+				m_pTex1[pCount + i].x = _vec3Points_uv[face[i][1] - 1].x;	// Texture x
+				m_pTex1[pCount + i].y = _vec3Points_uv[face[i][1] - 1].y;	// Texture y
 			}
 			pCount += 3;
 		}
 	}
 	fclose(pfile); //關閉檔案
+
+	for (int i = 0; i < iuv; i++) {
+		printf("(%f, %f)\n", _vec3Points_uv[i].x, _vec3Points_uv[i].y);
+	}
+
+	//-----------------------Multitexturing--------------------------
+	for (int i = 0; i < m_iNumVtx; i++) {
+#if MULTITEXTURE >= LIGHT_MAP
+		m_pTex2[i] = m_pTex1[i];  // 產生 light map 所需的貼圖座標
+#endif
+#if MULTITEXTURE >= NORMAL_MAP
+		m_pTex3[i] = m_pTex1[i];;	// 產生 normal map 所需的貼圖座標
+#endif
+	}
+#if MULTITEXTURE >= NORMAL_MAP
+		// 計算 tangent vector
+	for (int i = 0; i < m_iNumVtx; i += 3) { // 三個 vertex 一組
+		float dU1 = m_pTex3[i + 1].x - m_pTex3[i].x;
+		float dV1 = m_pTex3[i + 1].y - m_pTex3[i].y;
+		float dU2 = m_pTex3[i + 2].x - m_pTex3[i].x;
+		float dV2 = m_pTex3[i + 2].y - m_pTex3[i].y;
+		float f = 1.0f / (dU1 * dV2 - dU2*dV1);
+		vec4 E1 = m_pPoints[i + 1] - m_pPoints[i];
+		vec4 E2 = m_pPoints[i + 2] - m_pPoints[i];
+
+		vec3 tangent;
+		tangent.x = f*(dV2 * E1.x + E2.x * (-dV1));
+		tangent.y = f*(dV2 * E1.y + E2.y * (-dV1));
+		tangent.z = f*(dV2 * E1.z + E2.z * (-dV1));
+
+		m_pTangentV[i] += tangent;
+		m_pTangentV[i + 1] += tangent;
+		m_pTangentV[i + 2] = tangent;
+	}
+	for (int i = 0; i < m_iNumVtx; i++)
+		m_pTangentV[i] = normalize(m_pTangentV[i]);
+#endif
+
 
 	// Set shader's name
 	SetShaderName("vsPerPixelLighting.glsl", "fsPerPixelLighting.glsl");
@@ -66,8 +121,6 @@ CObjReader::CObjReader(char *objfile)
 	// Create and initialize a buffer object 
 	//CreateBufferObject();
 
-	// 初始顏色 : -1
-	//m_fColor[0] = -1.0f; m_fColor[1] = -1.0f; m_fColor[2] = -1.0f; m_fColor[3] = 1;
 	// 預設將所有的面都設定成灰色
 	for (int i = 0; i < m_iNumVtx; i++) m_pColors[i] = vec4(-1.0f, -1.0f, -1.0f, 1.0f);
 
@@ -80,7 +133,8 @@ CObjReader::~CObjReader()
 {
 	//歸還空間
 	if (_vec4Points != NULL) delete[] _vec4Points;
-	if (_vec3Points != NULL) delete[] _vec3Points;
+	if (_vec3Points_n != NULL) delete[] _vec3Points_n;
+	if (_vec3Points_uv != NULL) delete[] _vec3Points_uv;
 }
 
 void CObjReader::Draw()

@@ -67,11 +67,11 @@ CQuad::CQuad()
 	m_pTex3[5] = vec2(0.0f, 1.0f);
 	// 計算 tangent vector
 	for (int i = 0; i < 6; i += 3) { // 三個 vertex 一組
-		float dU1 = m_pTex1[i + 1].x - m_pTex1[i].x;
-		float dV1 = m_pTex1[i + 1].y - m_pTex1[i].y;
-		float dU2 = m_pTex1[i + 2].x - m_pTex1[i].x;
-		float dV2 = m_pTex1[i + 2].y - m_pTex1[i].y;
-		float f = 1.0f/(dU1 * dV2 - dU2*dV1);
+		float dU1 = m_pTex3[i + 1].x - m_pTex3[i].x;
+		float dV1 = m_pTex3[i + 1].y - m_pTex3[i].y;
+		float dU2 = m_pTex3[i + 2].x - m_pTex3[i].x;
+		float dV2 = m_pTex3[i + 2].y - m_pTex3[i].y;
+		float f = 1.0f / (dU1 * dV2 - dU2*dV1);
 		vec4 E1 = m_pPoints[i + 1] - m_pPoints[i];
 		vec4 E2 = m_pPoints[i + 2] - m_pPoints[i];
 
