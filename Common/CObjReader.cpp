@@ -77,9 +77,6 @@ CObjReader::CObjReader(char *objfile)
 	}
 	fclose(pfile); //Ãö³¬ÀÉ®×
 
-	for (int i = 0; i < iuv; i++) {
-		printf("(%f, %f)\n", _vec3Points_uv[i].x, _vec3Points_uv[i].y);
-	}
 
 	//-----------------------Multitexturing--------------------------
 	for (int i = 0; i < m_iNumVtx; i++) {

@@ -21,6 +21,8 @@ CShape::CShape()
 
 	m_fElapsedTime = 0;		// 預設時間從 0 開始
 
+	m_vLightMapColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);	// Light Map 顏色, 預設為白色
+
 	m_pPoints = nullptr; 	m_pNormals = nullptr; 	m_pColors = nullptr; 	m_pTex1 = nullptr;
 #if MULTITEXTURE >= LIGHT_MAP
 	m_pTex2 = nullptr;	
@@ -195,6 +197,9 @@ void CShape::SetShader(GLuint uiShaderHandle)
 
 	m_uiElapsedTime = glGetUniformLocation(m_uiProgram, "fElapsedTime");
 	glUniform1f(m_uiElapsedTime, m_fElapsedTime);	// 貼圖的個數，預設為 1，直接傳入 pixel shader
+
+	m_uiLightMapColor = glGetUniformLocation(m_uiProgram, "LightMapColor");		// Light Map 顏色
+	glUniform4fv(m_uiLightMapColor, 1, m_vLightMapColor);
 
 #ifdef CUBIC_MAP
 	// For Cube Map
@@ -472,6 +477,11 @@ void CShape::SetLightMapTiling(float uTiling, float vTiling)
 	glBindBuffer(GL_ARRAY_BUFFER, m_uiBuffer);
 	glBufferSubData(GL_ARRAY_BUFFER, (sizeof(vec4) + sizeof(vec3) + sizeof(vec4) + sizeof(vec2))*m_iNumVtx, sizeof(vec2)*m_iNumVtx, m_pTex2);
 #endif
+}
+
+void CShape::SetLightMapColor(vec4 vColor)
+{
+	m_vLightMapColor = vColor;	// Light Map Color
 }
 
 

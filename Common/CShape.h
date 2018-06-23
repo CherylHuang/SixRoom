@@ -44,16 +44,16 @@ protected:
 	vec2 *m_pTex1;
 
 #if MULTITEXTURE >= LIGHT_MAP
-	vec2 *m_pTex2;	// 新增第二張貼圖 for example 3
+	vec2 *m_pTex2;				// 新增第二張貼圖 for example 3
 #endif
 #if MULTITEXTURE >= NORMAL_MAP
-	vec2 *m_pTex3;		// 新增第三張貼圖 for example 4
-	vec3 *m_pTangentV;	// 新增 tangent vector for each vertex
+	vec2 *m_pTex3;				// 新增第三張貼圖 for example 4
+	vec3 *m_pTangentV;			// 新增 tangent vector for each vertex
 #endif
 
 	int  m_iNumVtx;
 
-	GLfloat m_fColor[4]; // Object's color
+	GLfloat m_fColor[4];		// Object's color
 	// For shaders' name
 	char *m_pVXshader, *m_pFSshader;
 
@@ -79,6 +79,8 @@ protected:
 	GLuint  m_uiElapsedTime;	// 該物件出現到目前為止經過的時間
 	GLfloat m_fElapsedTime;
 
+	point4 m_vLightMapColor;	// LightMap 顏色
+	GLuint m_uiLightMapColor;
 
 #ifdef CUBIC_MAP
 	GLuint  m_uiTRS;			// TRSMatrix 傳入 Pixel Shader 的位置
@@ -147,6 +149,7 @@ public:
 	void SetMirror(bool uAxis, bool vAxis); // U軸 與 V軸 是否要鏡射
 	void SetTiling(float uTiling, float vTiling);  // 對 U軸 與 V軸 進行拼貼的縮放
 	void SetLightMapTiling(float uTiling, float vTiling);  // 對 LightMap U軸 與 V軸 進行拼貼的縮放
+	void SetLightMapColor(vec4 vColor);	// 設定 Light Map 顏色
 
 	void SetLightingDisable() {m_iLighting = 0;}
 
