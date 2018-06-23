@@ -38,11 +38,12 @@ CQuad		  *g_pFloor, *g_pCeiling;
 CSolidCube    *g_pLeftWall1, *g_pLeftWall2, *g_pRightWall1, *g_pRightWall2;
 CSolidCube    *g_pFrontWall1, *g_pFrontWall2, *g_pBackWall1, *g_pBackWall2;
 CSolidCube	  *g_pLeftRoomWalls[9], *g_pRightRoomWalls[9];
+CSolidCube	  *g_pDoors[4], *g_pDoorUpperWalls[4];
 
 CSolidSphere  *g_pSphere;
 
 CObjReader	  *g_pStairs;
-CObjReader	  *g_pGemSweet, *g_pGemToy, *g_pGemGarden;
+CObjReader	  *g_pGemSweet, *g_pGemToy, *g_pGemGarden, *g_pDiamond;
 
 // For View Point
 GLfloat g_fRadius = 8.0;
@@ -116,6 +117,9 @@ void init( void )
 	g_uiFTexID[5] = texturepool->AddTexture("texture/LightMap/star2.png");				// red gem Light
 	g_uiFTexID[6] = texturepool->AddTexture("texture/LightMap/star4.png");				// blue gem Light
 	g_uiFTexID[7] = texturepool->AddTexture("texture/LightMap/flower2.png");			// green gem Light
+	g_uiFTexID[8] = texturepool->AddTexture("texture/LightMap/flower.png");				// diamond Light
+	g_uiFTexID[9] = texturepool->AddTexture("texture/DiffuseMap/wood.png");				// door Diffuse
+	g_uiFTexID[10] = texturepool->AddTexture("texture/NormalMap/wood_NRM.png");		// door Normal
 	
 	g_uiSphereCubeMap = CubeMap_load_SOIL();
 
@@ -149,9 +153,9 @@ void init( void )
 	g_pLeftWall1 = new CSolidCube;											// Left Wall-1
 	g_pLeftWall1->SetTextureLayer( DIFFUSE_MAP | NORMAL_MAP);
 	g_pLeftWall1->SetShader();
-	vT.x = -FLOOR_SCALE / 2.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 4.0f;
+	vT.x = -FLOOR_SCALE / 2.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 4.0f + FLOOR_SCALE / 12.0f;	//+ FLOOR_SCALE / 12.0f : 門框空間
 	mxT = Translate(vT);
-	mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
+	mxS = Scale(FLOOR_SCALE / 3.0f, 1, FLOOR_SCALE / 2.0f);
 	g_pLeftWall1->SetTRSMatrix(mxT * RotateX(90.0f) * RotateZ(90.0f) * mxS);
 	g_pLeftWall1->SetShadingMode(GOURAUD_SHADING);
 	g_pLeftWall1->SetTiling(3, 3);					// 設定貼圖
@@ -163,6 +167,7 @@ void init( void )
 	g_pLeftWall2->SetShader();
 	vT.x = -FLOOR_SCALE / 2.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = FLOOR_SCALE / 4.0f;
 	mxT = Translate(vT);
+	mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
 	g_pLeftWall2->SetTRSMatrix(mxT * RotateX(90.0f) * RotateZ(90.0f) * mxS);
 	g_pLeftWall2->SetShadingMode(GOURAUD_SHADING);
 	g_pLeftWall2->SetTiling(3, 3);					// 設定貼圖
@@ -174,6 +179,7 @@ void init( void )
 	g_pRightWall1->SetShader();
 	vT.x = FLOOR_SCALE / 2.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 4.0f;
 	mxT = Translate(vT);
+	mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
 	g_pRightWall1->SetTRSMatrix(mxT * RotateX(90.0f) * RotateZ(90.0f) * mxS);
 	g_pRightWall1->SetShadingMode(GOURAUD_SHADING);
 	g_pRightWall1->SetTiling(3, 3);					// 設定貼圖
@@ -185,6 +191,7 @@ void init( void )
 	g_pRightWall2->SetShader();
 	vT.x = FLOOR_SCALE / 2.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = FLOOR_SCALE / 4.0f;
 	mxT = Translate(vT);
+	mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
 	g_pRightWall2->SetTRSMatrix(mxT * RotateX(90.0f) * RotateZ(90.0f) * mxS);
 	g_pRightWall2->SetShadingMode(GOURAUD_SHADING);
 	g_pRightWall2->SetTiling(3, 3);					// 設定貼圖
@@ -196,6 +203,7 @@ void init( void )
 	g_pFrontWall1->SetShader();
 	vT.x = -FLOOR_SCALE / 4.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 2.0f;
 	mxT = Translate(vT);
+	mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
 	g_pFrontWall1->SetTRSMatrix(mxT * RotateX(90.0f) * mxS);
 	g_pFrontWall1->SetShadingMode(GOURAUD_SHADING);
 	g_pFrontWall1->SetTiling(3, 3);					// 設定貼圖
@@ -207,6 +215,7 @@ void init( void )
 	g_pFrontWall2->SetShader();
 	vT.x = FLOOR_SCALE / 4.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 2.0f;
 	mxT = Translate(vT);
+	mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
 	g_pFrontWall2->SetTRSMatrix(mxT * RotateX(90.0f) * mxS);
 	g_pFrontWall2->SetShadingMode(GOURAUD_SHADING);
 	g_pFrontWall2->SetTiling(3, 3);					// 設定貼圖
@@ -218,6 +227,7 @@ void init( void )
 	g_pBackWall1->SetShader();
 	vT.x = -FLOOR_SCALE / 4.0f; vT.y = FLOOR_SCALE / 4.0f; vT.z = FLOOR_SCALE / 2.0f;
 	mxT = Translate(vT);
+	mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
 	g_pBackWall1->SetTRSMatrix(mxT * RotateX(90.0f) * mxS);
 	g_pBackWall1->SetShadingMode(GOURAUD_SHADING);
 	g_pBackWall1->SetTiling(3, 3);					// 設定貼圖
@@ -235,6 +245,57 @@ void init( void )
 	g_pBackWall2->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 1), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	g_pBackWall2->SetKaKdKsShini(0.25f, 0.8f, 0.2f, 2);
 
+	//-------------------------------------------------------------------
+
+	for (int i = 0; i < 4; i++) {
+		g_pDoors[i] = new CSolidCube;											// Doors
+		g_pDoors[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
+		g_pDoors[i]->SetShader();
+		if (i == 0) {			// Left door 1
+			vT.x = -FLOOR_SCALE / 2.0f; vT.y = FLOOR_SCALE / 4.0f - FLOOR_SCALE / 12.0f; vT.z = -FLOOR_SCALE / 4.0f - FLOOR_SCALE / 6.0f;
+			mxT = Translate(vT);
+			mxS = Scale(FLOOR_SCALE / 6.0f, 1, FLOOR_SCALE / 3.0f);
+			g_pDoors[i]->SetTRSMatrix(mxT * RotateX(90.0f) * RotateZ(90.0f) * mxS);
+		}
+		else if (i == 1) {		// Left door 2
+
+		}
+		else if (i == 2) {		// Right door 1
+
+		}
+		else if (i == 3) {		// Right door 2
+
+		}
+		g_pDoors[i]->SetShadingMode(GOURAUD_SHADING);
+		g_pDoors[i]->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 1), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		g_pDoors[i]->SetKaKdKsShini(0.25f, 0.8f, 0.2f, 2);
+
+		//---------------------------------------
+
+		g_pDoorUpperWalls[i] = new CSolidCube;											// Doors upper walls
+		g_pDoorUpperWalls[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
+		g_pDoorUpperWalls[i]->SetShader();
+		if (i == 0) {			// Left door 1
+			vT.x = -FLOOR_SCALE / 2.0f; vT.y = FLOOR_SCALE / 4.0f + FLOOR_SCALE / 6.0f; vT.z = -FLOOR_SCALE / 4.0f - FLOOR_SCALE / 6.0f;
+			mxT = Translate(vT);
+			mxS = Scale(FLOOR_SCALE / 6.0f, 1, FLOOR_SCALE / 6.0f);
+			g_pDoorUpperWalls[i]->SetTRSMatrix(mxT * RotateX(90.0f) * RotateZ(90.0f) * mxS);
+		}
+		else if (i == 1) {		// Left door 2
+
+		}
+		else if (i == 2) {		// Right door 1
+
+		}
+		else if (i == 3) {		// Right door 2
+
+		}
+		g_pDoorUpperWalls[i]->SetShadingMode(GOURAUD_SHADING);
+		g_pDoorUpperWalls[i]->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 1), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		g_pDoorUpperWalls[i]->SetKaKdKsShini(0.25f, 0.8f, 0.2f, 2);
+	}
+
+	//--------------------------------------------------------------------------
 	for (int i = 0; i < 9; i++) {
 		g_pLeftRoomWalls[i] = new CSolidCube;											// Left Room Walls
 		g_pLeftRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
@@ -242,6 +303,7 @@ void init( void )
 		if (i == 0) {			// Left side 1
 			vT.x = -FLOOR_SCALE; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 4.0f;
 			mxT = Translate(vT);
+			mxS = Scale(FLOOR_SCALE / 2.0f, 1, FLOOR_SCALE / 2.0f);
 			g_pLeftRoomWalls[i]->SetTRSMatrix(mxT * RotateX(90.0f) * RotateZ(90.0f) * mxS);
 		}
 		else if (i == 1) {		// Left side 2
@@ -289,7 +351,7 @@ void init( void )
 		g_pLeftRoomWalls[i]->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 1), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 		g_pLeftRoomWalls[i]->SetKaKdKsShini(0.25f, 0.8f, 0.2f, 2);
 
-		//---------------------------------------------
+		//---------------------------------------
 
 		g_pRightRoomWalls[i] = new CSolidCube;											// Right Room Walls
 		g_pRightRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
@@ -386,9 +448,9 @@ void init( void )
 	g_pGemSweet->SetMaterials(vec4(0), vec4(0.85f, 0, 0, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	g_pGemSweet->SetKaKdKsShini(0.15f, 0.95f, 0.5f, 5);
 	g_pGemSweet->SetShader();
-	vT.x = -FLOOR_SCALE * 0.75f; vT.y = 1.0f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : LR1
+	vT.x = -FLOOR_SCALE * 0.75f; vT.y = 1.5f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : LR1
 	mxT = Translate(vT);
-	vS.x = vS.y = vS.z = 0.5f;				//Scale
+	vS.x = vS.y = vS.z = 0.7f;				//Scale
 	mxS = Scale(vS);
 	g_pGemSweet->SetTRSMatrix(mxT * mxS);
 	g_pGemSweet->SetShadingMode(GOURAUD_SHADING);
@@ -403,7 +465,7 @@ void init( void )
 	g_pGemToy->SetShader();
 	vT.x = -FLOOR_SCALE * 0.75f; vT.y = 0.0f; vT.z = FLOOR_SCALE / 4.0f;	//Location : LR2
 	mxT = Translate(vT);
-	vS.x = vS.y = vS.z = 0.5f;				//Scale
+	vS.x = vS.y = vS.z = 0.7f;				//Scale
 	mxS = Scale(vS);
 	g_pGemToy->SetTRSMatrix(mxT * RotateY(90.f) * mxS);
 	g_pGemToy->SetShadingMode(GOURAUD_SHADING);
@@ -414,15 +476,29 @@ void init( void )
 	g_pGemGarden->SetLightMapColor(vec4(1.0f, 1.0f, 0.0f, 0.3f));	//Light Map : 半透明黃色
 	// materials
 	g_pGemGarden->SetMaterials(vec4(0), vec4(0.f, 0.85f, 0.f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	g_pGemGarden->SetKaKdKsShini(0.15f, 0.95f, 0.8f, 5);
+	g_pGemGarden->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
 	g_pGemGarden->SetShader();
-	vT.x = FLOOR_SCALE * 0.75f; vT.y = 1.0f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : RR1
+	vT.x = FLOOR_SCALE * 0.75f; vT.y = 1.5f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : RR1
 	mxT = Translate(vT);
-	vS.x = vS.y = vS.z = 0.5f;				//Scale
+	vS.x = vS.y = vS.z = 0.7f;				//Scale
 	mxS = Scale(vS);
 	g_pGemGarden->SetTRSMatrix(mxT * mxS);
 	g_pGemGarden->SetShadingMode(GOURAUD_SHADING);
 
+	//-----------------------------------------
+	g_pDiamond = new CObjReader("obj/diamond.obj");				//鑽石
+	g_pDiamond->SetTextureLayer(DIFFUSE_MAP | LIGHT_MAP);	//貼圖
+	g_pDiamond->SetLightMapColor(vec4(0.95f, 0.5f, 0.f, 0.3f));	//Light Map : 半透明橘色
+	// materials
+	g_pDiamond->SetMaterials(vec4(0), vec4(0.95f, 0.f, 0.95f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pDiamond->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
+	g_pDiamond->SetShader();
+	vT.x = FLOOR_SCALE * 0.75f; vT.y = 1.0f; vT.z = FLOOR_SCALE / 4.0f;	//Location : RR2
+	mxT = Translate(vT);
+	vS.x = vS.y = vS.z = 0.35f;				//Scale
+	mxS = Scale(vS);
+	g_pDiamond->SetTRSMatrix(mxT * mxS);
+	g_pDiamond->SetShadingMode(GOURAUD_SHADING);
 
 	//------------------------------------------
 	// 設定 代表 Light 的 WireSphere
@@ -449,6 +525,10 @@ void init( void )
 	g_pFrontWall2->SetProjectionMatrix(mpx);
 	g_pBackWall1->SetProjectionMatrix(mpx);
 	g_pBackWall2->SetProjectionMatrix(mpx);
+	for (int i = 0; i < 4; i++) {
+		g_pDoors[i]->SetProjectionMatrix(mpx);
+		g_pDoorUpperWalls[i]->SetProjectionMatrix(mpx);
+	}
 	for (int i = 0; i < 9; i++) {
 		g_pLeftRoomWalls[i]->SetProjectionMatrix(mpx);
 		g_pRightRoomWalls[i]->SetProjectionMatrix(mpx);
@@ -462,6 +542,7 @@ void init( void )
 	g_pGemSweet->SetProjectionMatrix(mpx);
 	g_pGemToy->SetProjectionMatrix(mpx);
 	g_pGemGarden->SetProjectionMatrix(mpx);
+	g_pDiamond->SetProjectionMatrix(mpx);
 }
 
 //----------------------------------------------------------------------------
@@ -473,24 +554,33 @@ void GL_Display( void )
 	glEnable(GL_BLEND);								// 設定2D Texure Mapping 有作用
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	//WALLS
 	glActiveTexture(GL_TEXTURE0);					// select active texture 0
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[0]);	// 與 Diffuse Map 結合
 	glActiveTexture(GL_TEXTURE2);					// normal map
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[1]);
 	g_pFloor->Draw();
 	g_pCeiling->Draw();
-	//g_pLeftWall1->Draw();
-	//g_pLeftWall2->Draw();
-	//g_pRightWall1->Draw();
-	//g_pRightWall2->Draw();
+	g_pLeftWall1->Draw();
+	g_pLeftWall2->Draw();
+	g_pRightWall1->Draw();
+	g_pRightWall2->Draw();
 	g_pFrontWall1->Draw();
 	g_pFrontWall2->Draw();
 	g_pBackWall1->Draw();
 	g_pBackWall2->Draw();
+	for (int i = 0; i < 4; i++) g_pDoorUpperWalls[i]->Draw();
 	for (int i = 0; i < 9; i++) {
 		g_pLeftRoomWalls[i]->Draw();
 		g_pRightRoomWalls[i]->Draw();
 	}
+
+	//DOORS
+	glActiveTexture(GL_TEXTURE0);					// select active texture 0
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[9]);	// 與 Diffuse Map 結合
+	glActiveTexture(GL_TEXTURE2);					// normal map
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[10]);
+	for (int i = 0; i < 4; i++) g_pDoors[i]->Draw();
 
 	glActiveTexture(GL_TEXTURE0);							// select active texture 0
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[2]);			// 與 Diffuse Map 結合
@@ -514,6 +604,10 @@ void GL_Display( void )
 	glActiveTexture(GL_TEXTURE1); // select active texture 1
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[7]); // 與 Light Map 結合
 	g_pGemGarden->Draw();
+
+	glActiveTexture(GL_TEXTURE1); // select active texture 1
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[8]); // 與 Light Map 結合
+	g_pDiamond->Draw();
 
 	glDisable(GL_BLEND);	// 關閉 Blending
 	glDepthMask(GL_TRUE);	// --------------------------------------  開啟對 Z-Buffer 的寫入操作
@@ -579,6 +673,10 @@ void onFrameMove(float delta)
 		g_pFrontWall2->SetViewMatrix(mvx);
 		g_pBackWall1->SetViewMatrix(mvx);
 		g_pBackWall2->SetViewMatrix(mvx);
+		for (int i = 0; i < 4; i++) {
+			g_pDoors[i]->SetViewMatrix(mvx);
+			g_pDoorUpperWalls[i]->SetViewMatrix(mvx);
+		}
 		for (int i = 0; i < 9; i++) {
 			g_pLeftRoomWalls[i]->SetViewMatrix(mvx);
 			g_pRightRoomWalls[i]->SetViewMatrix(mvx);
@@ -593,6 +691,7 @@ void onFrameMove(float delta)
 		g_pGemSweet->SetViewMatrix(mvx);
 		g_pGemToy->SetViewMatrix(mvx);
 		g_pGemGarden->SetViewMatrix(mvx);
+		g_pDiamond->SetViewMatrix(mvx);
 	}
 
 	// 如果需要重新計算時，在這邊計算每一個物件的顏色
@@ -606,6 +705,10 @@ void onFrameMove(float delta)
 	g_pFrontWall2->Update(delta, g_Light1);
 	g_pBackWall1->Update(delta, g_Light1);
 	g_pBackWall2->Update(delta, g_Light1);
+	for (int i = 0; i < 4; i++) {
+		g_pDoors[i]->Update(delta, g_Light1);
+		g_pDoorUpperWalls[i]->Update(delta, g_Light1);
+	}
 	for (int i = 0; i < 9; i++) {
 		g_pLeftRoomWalls[i]->Update(delta, g_Light1);
 		g_pRightRoomWalls[i]->Update(delta, g_Light1);
@@ -619,6 +722,7 @@ void onFrameMove(float delta)
 	g_pGemSweet->Update(delta, g_Light1);		// gems
 	g_pGemToy->Update(delta, g_Light1);
 	g_pGemGarden->Update(delta, g_Light1);
+	g_pDiamond->Update(delta, g_Light1);
 
 	GL_Display();
 }
@@ -742,6 +846,10 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		delete g_pRightWall1, g_pRightWall2;
 		delete g_pFrontWall1, g_pFrontWall2;
 		delete g_pBackWall1 ,g_pBackWall2;
+		for (int i = 0; i < 4; i++) {
+			delete g_pDoors[i];
+			delete g_pDoorUpperWalls[i];
+		}
 		for (int i = 0; i < 9; i++) {
 			delete g_pLeftRoomWalls[i];
 			delete g_pRightRoomWalls[i];
@@ -754,6 +862,7 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		delete g_pGemSweet;
 		delete g_pGemToy;
 		delete g_pGemGarden;
+		delete g_pDiamond;
 
 		CCamera::getInstance()->destroyInstance();
 		CTexturePool::getInstance()->destroyInstance();
