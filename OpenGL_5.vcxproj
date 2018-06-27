@@ -121,10 +121,12 @@
     <None Include="fsNormalMapLighting.glsl" />
     <None Include="fsPerPixelLighting.glsl" />
     <None Include="fsPerVtxLighting.glsl" />
+    <None Include="fsSkyBox.glsl" />
     <None Include="vsCubeMapping.glsl" />
     <None Include="vsNormalMapLighting.glsl" />
     <None Include="vsPerPixelLighting.glsl" />
     <None Include="vsPerVtxLighting.glsl" />
+    <None Include="vsSkyBox.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="SOIL\Release\SOIL.lib" />
