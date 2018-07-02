@@ -16,7 +16,10 @@ public:
 	CSolidSphere(const GLfloat fRadius=1.0f, const int iSlices=12,const  int iStacks = 6);
 	~CSolidSphere();
 
-	void Update(float dt, const LightSource &lights);
+	void Update(float dt, const LightSource &lights);	//方
+	void Update(float dt, const LightSource &Lights, const LightSource &Lights2);	//ㄢ方
+	void Update(float dt, const LightSource &Lights, const LightSource &Lights2, const LightSource &Lights3);	//方
+	void Update(float dt, const LightSource &Lights, const LightSource &Lights2, const LightSource &Lights3, const LightSource &Lights4);	//方
 	void Update(float dt); // ぃ璸衡方酚
 
 	// Sphere 酶籹よ﹍ㄏノ舱 GL_TRIANGLE_STRIP ㄓ酶籹, ⊿Τ快猭矗ㄑ Flat Shading

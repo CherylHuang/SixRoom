@@ -140,37 +140,71 @@ void CSolidSphere::RenderWithGouraudShading(const LightSource &lights)
 }
 
 
-void CSolidSphere::Update(float dt, const LightSource &lights)
+void CSolidSphere::Update(float dt, const LightSource &Lights)	//方
 {
 #ifdef LIGHTING_WITHCPU
-	if( m_bViewUpdated || m_bTRSUpdated  ) { // Model View 闽痻皚ず甧Τ笆
+	if (m_bViewUpdated || m_bTRSUpdated) { // Model View 闽痻皚ず甧Τ笆
 		m_mxMVFinal = m_mxView * m_mxTRS;
 		m_mxMV3X3Final = mat3(
-			m_mxMVFinal._m[0].x,  m_mxMVFinal._m[1].x, m_mxMVFinal._m[2].x,
-			m_mxMVFinal._m[0].y,  m_mxMVFinal._m[1].y, m_mxMVFinal._m[2].y,
-			m_mxMVFinal._m[0].z,  m_mxMVFinal._m[1].z, m_mxMVFinal._m[2].z);
+			m_mxMVFinal._m[0].x, m_mxMVFinal._m[1].x, m_mxMVFinal._m[2].x,
+			m_mxMVFinal._m[0].y, m_mxMVFinal._m[1].y, m_mxMVFinal._m[2].y,
+			m_mxMVFinal._m[0].z, m_mxMVFinal._m[1].z, m_mxMVFinal._m[2].z);
+
 #ifdef GENERAL_CASE
-		m_mxITMV = InverseTransposeMatrix(m_mxMVFinal); 
+		m_mxITMV = InverseTransposeMatrix(m_mxMVFinal);
 #endif
+
 		m_bViewUpdated = m_bTRSUpdated = false;
 	}
-	if (m_iMode == FLAT_SHADING)  RenderWithGouraudShading(lights);
-	else RenderWithGouraudShading(lights);
+	if (m_iMode == FLAT_SHADING) RenderWithFlatShading(Lights);
+	else RenderWithGouraudShading(Lights);
 
 #else // Lighting With GPU
-	if (m_bViewUpdated || m_bTRSUpdated ) {
+	if (m_bViewUpdated || m_bTRSUpdated) {
 		m_mxMVFinal = m_mxView * m_mxTRS;
 		m_bViewUpdated = m_bTRSUpdated = false;
 	}
-	m_vLightInView = m_mxView * lights.position;		// 盢 Light 锣传描繷畒夹肚
-	// 衡 AmbientProduct DiffuseProduct 籔 SpecularProduct ず甧
-	m_AmbientProduct = m_Material.ka * m_Material.ambient  * lights.ambient;
-	m_AmbientProduct.w = m_Material.ambient.w;
-	m_DiffuseProduct = m_Material.kd * m_Material.diffuse  * lights.diffuse;
-	m_DiffuseProduct.w = m_Material.diffuse.w;
-	m_SpecularProduct = m_Material.ks * m_Material.specular * lights.specular;
-	m_SpecularProduct.w = m_Material.specular.w;
+	//砞﹚方 & 穝方计秖
+	m_Light1 = Lights;
+	UpdateMultiLight(1);
+
 #endif
+}
+
+void CSolidSphere::Update(float dt, const LightSource &Lights, const LightSource &Lights2)	//ㄢ方
+{
+	// Lighting With GPU
+	if (m_bViewUpdated || m_bTRSUpdated) {
+		m_mxMVFinal = m_mxView * m_mxTRS;
+		m_bViewUpdated = m_bTRSUpdated = false;
+	}
+	//砞﹚方 & 穝方计秖
+	m_Light1 = Lights;	m_Light2 = Lights2;
+	UpdateMultiLight(2);
+}
+
+void CSolidSphere::Update(float dt, const LightSource &Lights, const LightSource &Lights2, const LightSource &Lights3)	//方
+{
+	// Lighting With GPU
+	if (m_bViewUpdated || m_bTRSUpdated) {
+		m_mxMVFinal = m_mxView * m_mxTRS;
+		m_bViewUpdated = m_bTRSUpdated = false;
+	}
+	//砞﹚方 & 穝方计秖
+	m_Light1 = Lights;	m_Light2 = Lights2; m_Light3 = Lights3;
+	UpdateMultiLight(3);
+}
+
+void CSolidSphere::Update(float dt, const LightSource &Lights, const LightSource &Lights2, const LightSource &Lights3, const LightSource &Lights4)	//方
+{
+	// Lighting With GPU
+	if (m_bViewUpdated || m_bTRSUpdated) {
+		m_mxMVFinal = m_mxView * m_mxTRS;
+		m_bViewUpdated = m_bTRSUpdated = false;
+	}
+	//砞﹚方 & 穝方计秖
+	m_Light1 = Lights;	m_Light2 = Lights2; m_Light3 = Lights3; m_Light4 = Lights4;
+	UpdateMultiLight(4);
 }
 
 void CSolidSphere::Update(float dt)
