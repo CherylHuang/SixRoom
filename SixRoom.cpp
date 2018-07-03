@@ -42,11 +42,11 @@ CSolidCube		*g_pDoorUpperWalls[4], *g_pBigDoorUpperWall, *g_pBigDoorBottomWall;
 CSolidCube		*g_pBalconyWall;
 
 CSolidCube		*g_pBigDoor;
-CObjReader		*g_pStairs, *g_pDoors[4];
-CObjReader		*g_pFences[3];
+CObjReader		*g_pStairs, *g_pDoors[4], *g_pFences[3];
 CObjReader		*g_pGemSweet, *g_pGemToy, *g_pGemGarden, *g_pDiamond;
+CObjReader		*g_pGun;
 
-CQuad			*g_pFire[5];
+CQuad			*g_pFire;
 
 CSolidSphere	*g_pSphere, *g_pSkyBox;
 
@@ -244,7 +244,7 @@ void init( void )
 	point4  at(0.0f, 0.0f, 0.0f, 1.0f);
 	auto camera = CCamera::create();
 	camera->updateViewLookAt(eye, at);
-	camera->updatePerspective(60.0, (GLfloat)SCREEN_SIZE / (GLfloat)SCREEN_SIZE, 1.0, 1000.0);
+	camera->updatePerspective(60.0, (GLfloat)SCREEN_SIZE / (GLfloat)SCREEN_SIZE, 0.0, 1000.0);
 
 	auto texturepool = CTexturePool::create();
 	g_uiFTexID[0] = texturepool->AddTexture("texture/DiffuseMap/stone-tile-1.png");		// floor
@@ -261,7 +261,9 @@ void init( void )
 	g_uiFTexID[11] = texturepool->AddTexture("texture/DiffuseMap/wood.png");			// big door Diffuse
 	g_uiFTexID[12] = texturepool->AddTexture("texture/NormalMap/wood_NRM.png");			// big door Normal
 	g_uiFTexID[13] = texturepool->AddTexture("texture/DiffuseMap/fireParticle.png");	// fire particle
-	g_uiFTexID[14] = texturepool->AddTexture("texture/lightMap2.png");	// fire Light
+	g_uiFTexID[14] = texturepool->AddTexture("texture/lightMap2.png");					// fire Light
+	g_uiFTexID[15] = texturepool->AddTexture("texture/DiffuseMap/gun.png");				// gun Diffuse
+	g_uiFTexID[16] = texturepool->AddTexture("texture/NormalMap/gun_NRM.png");			// gun Normal
 	
 	g_uiSphereCubeMap = CubeMap_load_SOIL();	// Cub Map 設置
 
@@ -457,25 +459,34 @@ void init( void )
 	g_pDiamond->SetShadingMode(GOURAUD_SHADING);
 
 	//---------------------------------------------------------------------------
+
+	g_pGun = new CObjReader("obj/gun.obj");						//槍
+	g_pGun->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);	//貼圖
+	g_pGun->SetMaterials(vec4(0), vec4(0.95f, 0.95f, 0.95f, 1.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f));	// materials
+	g_pGun->SetKaKdKsShini(0.15f, 0.95f, 0.5f, 5);
+	g_pGun->SetShader();
+	vT.x = 0.0f; vT.y = 5.0f; vT.z = 0.0f;	//Location
+	mxT = Translate(vT);
+	vS.x = vS.y = vS.z = 0.3f;				//Scale
+	mxS = Scale(vS);
+	g_pGun->SetTRSMatrix(mxT * mxS);
+	g_pGun->SetShadingMode(GOURAUD_SHADING);
+
+	//---------------------------------------------------------------------------
 	
-	for (int i = 0; i < 5; i++) {
-		g_pFire[i] = new CQuad;											// Fire
-		g_pFire[i]->SetTextureLayer(DIFFUSE_MAP | LIGHT_MAP);
-		//g_pFire->SetLightMapColor(vec4(0.95f, 0.95f, 0.95f, 0.8f));
-		g_pFire[i]->SetShader();
-		float fRandx = (rand() % 10) * 0.1f - 0.5f;
-		float fRandy = (rand() % 6) * 0.1f - 0.5f;
-		float fRands = (rand() % 10) * 0.1f - 0.5f;
-		vT.x = fRandx; vT.y = 5.0f + fRandy; vT.z = -5.0f;		// Location
-		mxT = Translate(vT);
-		vS.x = vS.y = vS.z = 5.0f + fRands;						// Scale
-		mxS = Scale(vS);
-		g_pFire[i]->SetTRSMatrix(mxT * RotateX(90.f) * mxS);
-		g_pFire[i]->SetShadingMode(GOURAUD_SHADING);
-		g_pFire[i]->SetTiling(1, 1);					// 設定貼圖
-		g_pFire[i]->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		g_pFire[i]->SetKaKdKsShini(0, 0.8f, 0.5f, 1);
-	}
+	g_pFire = new CQuad;											// Fire
+	g_pFire->SetTextureLayer(DIFFUSE_MAP | LIGHT_MAP);
+	//g_pFire->SetLightMapColor(vec4(0.95f, 0.95f, 0.95f, 0.8f));
+	g_pFire->SetShader();
+	vT.x = 0.f; vT.y = 5.0f; vT.z = -5.0f;		// Location
+	mxT = Translate(vT);
+	vS.x = vS.y = vS.z = 5.0f;						// Scale
+	mxS = Scale(vS);
+	g_pFire->SetTRSMatrix(mxT * RotateX(90.f) * mxS);
+	g_pFire->SetShadingMode(GOURAUD_SHADING);
+	g_pFire->SetTiling(1, 1);					// 設定貼圖
+	g_pFire->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pFire->SetKaKdKsShini(0, 0.8f, 0.5f, 1);
 
 	// for billboard
 	vT.y = 0.0f; vT.w = 0.f;		// Location
@@ -518,7 +529,7 @@ void init( void )
 	g_pBigDoorBottomWall->SetProjectionMatrix(mpx);
 	g_pBalconyWall->SetProjectionMatrix(mpx);
 
-	for (int i = 0; i < 5; i++) g_pFire[i]->SetProjectionMatrix(mpx);
+	g_pFire->SetProjectionMatrix(mpx);
 
 	g_pSkyBox->SetProjectionMatrix(mpx);
 	g_pSphere->SetProjectionMatrix(mpx);
@@ -532,6 +543,8 @@ void init( void )
 	g_pGemToy->SetProjectionMatrix(mpx);
 	g_pGemGarden->SetProjectionMatrix(mpx);
 	g_pDiamond->SetProjectionMatrix(mpx);
+
+	g_pGun->SetProjectionMatrix(mpx);
 }
 //----------------------------------------------------------------------------
 
@@ -897,6 +910,13 @@ void GL_Display( void )
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[12]);
 	g_pBigDoor->Draw();
 
+	// 槍
+	glActiveTexture(GL_TEXTURE0);					// diffuse map
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[15]);
+	glActiveTexture(GL_TEXTURE2);					// normal map
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[16]);
+	g_pGun->Draw();
+
 	//-----------------------------------
 
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -937,7 +957,7 @@ void GL_Display( void )
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[13]);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[14]); // Light Map
-	for (int i = 0; i < 5; i++) g_pFire[i]->Draw();
+	g_pFire->Draw();
 
 
 	glDisable(GL_BLEND);	// 關閉 Blending
@@ -984,9 +1004,11 @@ void onFrameMove(float delta)
 	g_ViewDir = normalize(g_ViewDir);
 	if (g_CameraPos.x < 0) g_fBillboardTheta = -180.f + 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));	// billboard 旋轉角
 	else g_fBillboardTheta = 180.f - 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));
-	for (int i = 0; i < 5; i++) {
-		//g_pFire[i]->SetTRSMatrix(Translate(0.f, 5.f, -3.f) * RotateY(g_fBillboardTheta) * RotateX(90.f) * Scale(3.f, 3.f, 3.f));
-	}
+	g_pFire->SetTRSMatrix(Translate(0.f, 5.f, -3.f) * RotateY(g_fBillboardTheta) * RotateX(90.f) * Scale(3.f, 3.f, 3.f));
+
+	// for gun
+	g_pGun->SetTRSMatrix(	Translate(g_eye) * RotateY(g_fPhi*60.f) * RotateX((g_fTheta + 1.5f)*60.f) *						//玩家位置/視角
+							Translate(0.5f, -1.4f, -2.8f) * RotateY(5.f) * RotateX(5.f) * Scale(0.3f, 0.3f, 0.3f));			//槍枝位置/轉角/大小
 
 	//---------------------------------------------------------------
 
@@ -1032,12 +1054,13 @@ void onFrameMove(float delta)
 		g_pStairs->SetViewMatrix(mvx);
 		g_pBigDoor->SetViewMatrix(mvx);
 		for (int i = 0; i < 3; i++) g_pFences[i]->SetViewMatrix(mvx);
-		for (int i = 0; i < 5; i++) g_pFire[i]->SetViewMatrix(mvx);
+		g_pFire->SetViewMatrix(mvx);
 
 		g_pGemSweet->SetViewMatrix(mvx);
 		g_pGemToy->SetViewMatrix(mvx);
 		g_pGemGarden->SetViewMatrix(mvx);
 		g_pDiamond->SetViewMatrix(mvx);
+		g_pGun->SetViewMatrix(mvx);
 	}
 
 	// 如果需要重新計算時，在這邊計算每一個物件的顏色
@@ -1089,12 +1112,14 @@ void onFrameMove(float delta)
 	g_pBalconyWall->Update(delta, g_Light_main, g_Light_out_f);
 	for (int i = 0; i < 3; i++) g_pFences[i]->Update(delta, g_Light_main, g_Light_out_f);
 
-	for (int i = 0; i < 5; i++) g_pFire[i]->Update(delta);
+	g_pFire->Update(delta);
 
 	g_pGemSweet->Update(delta, g_Light_main, g_Light_left1);		// gems
 	g_pGemToy->Update(delta, g_Light_main, g_Light_left2);
 	g_pGemGarden->Update(delta, g_Light_main, g_Light_right1);
 	g_pDiamond->Update(delta, g_Light_main, g_Light_right2);
+
+	g_pGun->Update(delta, g_Light_main);		// 槍
 
 	GL_Display();
 }
@@ -1233,9 +1258,10 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		delete g_pStairs;
 		delete g_pBigDoor;
 		for (int i = 0; i < 3; i++) delete g_pFences[i];
-		for (int i = 0; i < 5; i++) delete g_pFire[i];
+		delete g_pFire;
 
 		delete g_pGemSweet, g_pGemToy, g_pGemGarden, g_pDiamond;
+		delete g_pGun;
 
 		CCamera::getInstance()->destroyInstance();
 		CTexturePool::getInstance()->destroyInstance();
