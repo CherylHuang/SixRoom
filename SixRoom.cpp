@@ -44,11 +44,14 @@ CSolidCube		*g_pBalconyWall;
 CSolidCube		*g_pBigDoor;
 CObjReader		*g_pStairs, *g_pDoors[4], *g_pFences[3];
 CObjReader		*g_pGemSweet, *g_pGemToy, *g_pGemGarden, *g_pDiamond;
+CObjReader		*g_pGemSweet_pile, *g_pGemToy_pile, *g_pGemGarden_pile, *g_pDiamond_pile;
 CObjReader		*g_pGun;
 
 CQuad			*g_pFire;
-
 CSolidSphere	*g_pSphere, *g_pSkyBox;
+
+// for hitting
+bool g_bSweetHit, g_bToyHit, g_bGardenHit, g_bDiamondHit;
 
 // For View Point
 GLfloat g_fRadius = 8.0;
@@ -234,6 +237,8 @@ void CreateWalls();
 void init( void )
 {
 	srand((unsigned)time(NULL));
+
+	g_bSweetHit = g_bToyHit = g_bGardenHit = g_bDiamondHit = false;		// 擊中狀態
 
 	mat4 mxT, mxS;
 	vec4 vT;
@@ -460,6 +465,57 @@ void init( void )
 
 	//---------------------------------------------------------------------------
 
+	g_pGemSweet_pile = new CObjReader("obj/rock_pile.obj");				//紅水晶碎片
+	g_pGemSweet_pile->SetTextureLayer(DIFFUSE_MAP);	//貼圖
+	// materials
+	g_pGemSweet_pile->SetMaterials(vec4(0), vec4(0.85f, 0, 0, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pGemSweet_pile->SetKaKdKsShini(0.15f, 0.95f, 0.5f, 5);
+	g_pGemSweet_pile->SetShader();
+	vT.x = -FLOOR_SCALE * 0.75f; vT.y = 0.f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : LR1
+	mxT = Translate(vT);
+	vS.x = vS.y = vS.z = 0.5f;				//Scale
+	mxS = Scale(vS);
+	g_pGemSweet_pile->SetTRSMatrix(mxT * mxS);
+	g_pGemSweet_pile->SetShadingMode(GOURAUD_SHADING);
+
+	//-----------------------------------------
+	g_pGemToy_pile = new CObjReader("obj/rock_pile.obj");				//藍水晶碎片
+	g_pGemToy_pile->SetTextureLayer(DIFFUSE_MAP);	//貼圖
+	// materials
+	g_pGemToy_pile->SetMaterials(vec4(0), vec4(0, 0, 0.85f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pGemToy_pile->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
+	g_pGemToy_pile->SetShader();
+	vT.x = -FLOOR_SCALE * 0.75f; vT.y = 0.0f; vT.z = FLOOR_SCALE / 4.0f;	//Location : LR2
+	mxT = Translate(vT);
+	g_pGemToy_pile->SetTRSMatrix(mxT * RotateY(90.f) * mxS);
+	g_pGemToy_pile->SetShadingMode(GOURAUD_SHADING);
+
+	//-----------------------------------------
+	g_pGemGarden_pile = new CObjReader("obj/rock_pile.obj");			//綠水晶碎片
+	g_pGemGarden_pile->SetTextureLayer(DIFFUSE_MAP);	//貼圖
+	// materials
+	g_pGemGarden_pile->SetMaterials(vec4(0), vec4(0.f, 0.85f, 0.f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pGemGarden_pile->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
+	g_pGemGarden_pile->SetShader();
+	vT.x = FLOOR_SCALE * 0.75f; vT.y = 0.f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : RR1
+	mxT = Translate(vT);
+	g_pGemGarden_pile->SetTRSMatrix(mxT * mxS);
+	g_pGemGarden_pile->SetShadingMode(GOURAUD_SHADING);
+
+	//-----------------------------------------
+	g_pDiamond_pile = new CObjReader("obj/rock_pile.obj");				//鑽石碎片
+	g_pDiamond_pile->SetTextureLayer(DIFFUSE_MAP);	//貼圖
+	// materials
+	g_pDiamond_pile->SetMaterials(vec4(0), vec4(0.95f, 0.f, 0.95f, 0.7f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pDiamond_pile->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
+	g_pDiamond_pile->SetShader();
+	vT.x = FLOOR_SCALE * 0.75f; vT.y = 0.f; vT.z = FLOOR_SCALE / 4.0f;	//Location : RR2
+	mxT = Translate(vT);
+	g_pDiamond_pile->SetTRSMatrix(mxT * mxS);
+	g_pDiamond_pile->SetShadingMode(GOURAUD_SHADING);
+
+	//---------------------------------------------------------------------------
+
 	g_pGun = new CObjReader("obj/gun.obj");						//槍
 	g_pGun->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);	//貼圖
 	g_pGun->SetMaterials(vec4(0), vec4(0.95f, 0.95f, 0.95f, 1.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f));	// materials
@@ -543,6 +599,10 @@ void init( void )
 	g_pGemToy->SetProjectionMatrix(mpx);
 	g_pGemGarden->SetProjectionMatrix(mpx);
 	g_pDiamond->SetProjectionMatrix(mpx);
+	g_pGemSweet_pile->SetProjectionMatrix(mpx);
+	g_pGemToy_pile->SetProjectionMatrix(mpx);
+	g_pGemGarden_pile->SetProjectionMatrix(mpx);
+	g_pDiamond_pile->SetProjectionMatrix(mpx);
 
 	g_pGun->SetProjectionMatrix(mpx);
 }
@@ -707,8 +767,13 @@ void CreateWalls()
 
 	//--------------------------------------------------------------------------
 	for (int i = 0; i < 9; i++) {
-		g_pLeftRoomWalls[i] = new CSolidCube;											// Left Room Walls
-		g_pLeftRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
+		g_pLeftRoomWalls[i] = new CSolidCube;										// Left Room Walls
+		if (i == 5 || i == 7) {
+			g_pLeftRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | LIGHT_MAP);	// for floor
+			if (i == 5)g_pLeftRoomWalls[i]->SetLightMapColor(vec4(1.0f, 0.3f, 0.3f, 0.5f));	//Light Map : 半透明粉色
+			if (i == 7)g_pLeftRoomWalls[i]->SetLightMapColor(vec4(0.0f, 1.0f, 1.0f, 0.5f));	//Light Map : 半透明青色
+		}
+		else g_pLeftRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
 		g_pLeftRoomWalls[i]->SetShader();
 		if (i == 0) {			// Left side 1
 			vT.x = -FLOOR_SCALE; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 4.0f;
@@ -764,7 +829,12 @@ void CreateWalls()
 		//---------------------------------------
 
 		g_pRightRoomWalls[i] = new CSolidCube;											// Right Room Walls
-		g_pRightRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
+		if (i == 5 || i == 7) {
+			g_pRightRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | LIGHT_MAP);	// for floor
+			if (i == 5)g_pRightRoomWalls[i]->SetLightMapColor(vec4(1.0f, 1.0f, 0.0f, 0.3f));	//Light Map : 半透明黃色
+			if (i == 7)g_pRightRoomWalls[i]->SetLightMapColor(vec4(0.95f, 0.5f, 0.f, 0.3f));	//Light Map : 半透明橘色
+		}
+		else g_pRightRoomWalls[i]->SetTextureLayer(DIFFUSE_MAP | NORMAL_MAP);
 		g_pRightRoomWalls[i]->SetShader();
 		if (i == 0) {			// Right side 1
 			vT.x = FLOOR_SCALE; vT.y = FLOOR_SCALE / 4.0f; vT.z = -FLOOR_SCALE / 4.0f;
@@ -882,12 +952,36 @@ void GL_Display( void )
 	g_pBackWall1->Draw();
 	g_pBackWall2->Draw();
 	for (int i = 0; i < 9; i++) {
-		g_pLeftRoomWalls[i]->Draw();
-		g_pRightRoomWalls[i]->Draw();
+		if (i != 5 && i != 7) {		// floor
+			g_pLeftRoomWalls[i]->Draw();
+			g_pRightRoomWalls[i]->Draw();
+		}
 	}
 	g_pBigDoorUpperWall->Draw();
 	g_pBigDoorBottomWall->Draw();
 	g_pBalconyWall->Draw();
+	
+	if (g_bSweetHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[5]);			// sweet light map
+	}
+	g_pLeftRoomWalls[5]->Draw();
+	if (g_bToyHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[6]);			// toy light map
+	}
+	g_pLeftRoomWalls[7]->Draw();
+	if (g_bGardenHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[7]);			// garden light map
+	}
+	g_pRightRoomWalls[5]->Draw();
+	if (g_bDiamondHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[8]);			// diamond light map
+	}
+	g_pRightRoomWalls[7]->Draw();
+
 
 	//階梯
 	glActiveTexture(GL_TEXTURE0);					// diffuse map
@@ -935,23 +1029,30 @@ void GL_Display( void )
 	g_pSkyBox->Draw();	//天空
 
 	//----------透明度物件--------
+
 	for (int i = 0; i < 4; i++) g_pDoorUpperWalls[i]->Draw();	//門上玻璃
 
-	glActiveTexture(GL_TEXTURE1); // select active texture 1
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[5]); // 與 Light Map 結合
-	g_pGemSweet->Draw();		//GEMS
+	if (g_bSweetHit) g_pGemSweet_pile->Draw();					// 水晶碎片
+	if (g_bToyHit) g_pGemToy_pile->Draw();
+	if (g_bGardenHit) g_pGemGarden_pile->Draw();
+	if (g_bDiamondHit) g_pDiamond_pile->Draw();
 
-	glActiveTexture(GL_TEXTURE1); // select active texture 1
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[6]); // 與 Light Map 結合
-	g_pGemToy->Draw();
+	// GEMS
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[5]); // Light Map 
+	if (!g_bSweetHit) g_pGemSweet->Draw();
 
-	glActiveTexture(GL_TEXTURE1); // select active texture 1
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[7]); // 與 Light Map 結合
-	g_pGemGarden->Draw();
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[6]); // Light Map
+	if (!g_bToyHit) g_pGemToy->Draw();
 
-	glActiveTexture(GL_TEXTURE1); // select active texture 1
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[8]); // 與 Light Map 結合
-	g_pDiamond->Draw();
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[7]); // Light Map
+	if (!g_bGardenHit) g_pGemGarden->Draw();
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[8]); // Light Map
+	if (!g_bDiamondHit) g_pDiamond->Draw();
 
 	glActiveTexture(GL_TEXTURE0);							// 火焰
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[13]);
@@ -1060,6 +1161,11 @@ void onFrameMove(float delta)
 		g_pGemToy->SetViewMatrix(mvx);
 		g_pGemGarden->SetViewMatrix(mvx);
 		g_pDiamond->SetViewMatrix(mvx);
+		g_pGemSweet_pile->SetViewMatrix(mvx);
+		g_pGemToy_pile->SetViewMatrix(mvx);
+		g_pGemGarden_pile->SetViewMatrix(mvx);
+		g_pDiamond_pile->SetViewMatrix(mvx);
+
 		g_pGun->SetViewMatrix(mvx);
 	}
 
@@ -1118,6 +1224,10 @@ void onFrameMove(float delta)
 	g_pGemToy->Update(delta, g_Light_main, g_Light_left2);
 	g_pGemGarden->Update(delta, g_Light_main, g_Light_right1);
 	g_pDiamond->Update(delta, g_Light_main, g_Light_right2);
+	g_pGemSweet_pile->Update(delta, g_Light_main, g_Light_left1);
+	g_pGemToy_pile->Update(delta, g_Light_main, g_Light_left2);
+	g_pGemGarden_pile->Update(delta, g_Light_main, g_Light_right1);
+	g_pDiamond_pile->Update(delta, g_Light_main, g_Light_right2);
 
 	g_pGun->Update(delta, g_Light_main);		// 槍
 
@@ -1261,6 +1371,7 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		delete g_pFire;
 
 		delete g_pGemSweet, g_pGemToy, g_pGemGarden, g_pDiamond;
+		delete g_pGemSweet_pile, g_pGemToy_pile, g_pGemGarden_pile, g_pDiamond_pile;
 		delete g_pGun;
 
 		CCamera::getInstance()->destroyInstance();
@@ -1274,7 +1385,12 @@ void Win_Keyboard( unsigned char key, int x, int y )
 void Win_Mouse(int button, int state, int x, int y) {
 	switch(button) {
 		case GLUT_LEFT_BUTTON:   // 目前按下的是滑鼠左鍵
-			//if ( state == GLUT_DOWN ) ; 
+			if (state == GLUT_DOWN) {
+				g_bSweetHit = !g_bSweetHit;
+				g_bToyHit = !g_bToyHit;
+				g_bGardenHit = !g_bGardenHit;
+				g_bDiamondHit = !g_bDiamondHit;
+			}
 			break;
 		case GLUT_MIDDLE_BUTTON:  // 目前按下的是滑鼠中鍵 ，換成 Y 軸
 			//if ( state == GLUT_DOWN ) ; 
