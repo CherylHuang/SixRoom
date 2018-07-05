@@ -15,7 +15,7 @@ private:
 public:
 	CBullet(const GLfloat fRadius = 1.0f, const int iSlices = 12, const  int iStacks = 6);
 	~CBullet();
-	CBullet *link;		//for link list
+	//CBullet *link;		//for link list
 	mat4& GetTRSMatrix();
 
 	void Update(float dt, const LightSource &lights);	//¤@­Ó¥ú·½

@@ -18,6 +18,7 @@ private:
 public:
 	CSolidCube();
 	~CSolidCube(){};
+	mat4& GetTRSMatrix();
 
 	void Update(float dt); // 不計算光源的照明
 	void Update(float dt, const LightSource &lights);	//一個光源

@@ -222,3 +222,8 @@ void CSolidCube::Update(float dt)
 		m_bViewUpdated = m_bTRSUpdated = false;
 	}
 }
+
+mat4& CSolidCube::GetTRSMatrix()
+{
+	return(m_mxTRS);
+}

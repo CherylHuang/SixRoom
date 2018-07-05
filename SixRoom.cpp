@@ -64,6 +64,15 @@ vec3			g_vShootDir;			//子彈發射方向
 mat4			g_mxBulletPos;
 float			g_fCount_bullet = 0;	//子彈間隔時間計時
 
+// for light changing
+GLfloat	_fBWAngle_Track;
+float	_fMT[3] = { 0 };
+mat4	_mxMT;					//for main object translation
+bool	_bSetOnce_sweet, _bSetOnce_toy, _bSetOnce_garden;
+
+// for doors
+mat4	g_mxBigDoorPos;
+
 // For View Point
 GLfloat g_fRadius = 8.0;
 GLfloat g_fTheta = 45.0f*DegreesToRadians;
@@ -90,9 +99,9 @@ float g_fElapsedTime = 0;
 float g_fLightRadius = 6;
 float g_fLightTheta = 0;
 
-float g_fLightR = 0.85f;
-float g_fLightG = 0.85f;
-float g_fLightB = 0.85f;
+float g_fLightR = 0.05f;
+float g_fLightG = 0.05f;
+float g_fLightB = 0.05f;
 
 LightSource g_Light_out_f = {									//室外前光源
 	color4(0.95f, 0.95f, 0.95f, 1.0f),		// ambient 
@@ -162,7 +171,7 @@ LightSource g_Light_main = {
 	color4(g_fLightR, g_fLightG, g_fLightB, 1.0f), // ambient 
 	color4(g_fLightR, g_fLightG, g_fLightB, 1.0f), // diffuse
 	color4(g_fLightR, g_fLightG, g_fLightB, 1.0f), // specular
-	point4(6.0f, 10.0f, 0.0f, 1.0f),   // position
+	point4(0.0f, 10.0f, -3.0f, 1.0f),   // position
 	point4(0.0f, 0.0f, 0.0f, 1.0f),   // halfVector
 	vec3(0.0f, 0.0f, 0.0f),			  //spotDirection
 	2.0f,	// spotExponent(parameter e); cos^(e)(phi) 
@@ -250,6 +259,7 @@ void init( void )
 	srand((unsigned)time(NULL));
 
 	g_bSweetHit = g_bToyHit = g_bGardenHit = g_bDiamondHit = false;		// 擊中狀態
+	_bSetOnce_sweet = _bSetOnce_toy = _bSetOnce_garden = false;			// 擊中後設定一次
 
 	mat4 mxT, mxS;
 	vec4 vT;
@@ -993,20 +1003,36 @@ void GL_Display( void )
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[5]);			// sweet light map
 	}
+	else {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[14]);
+	}
 	g_pLeftRoomWalls[5]->Draw();
 	if (g_bToyHit) {
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[6]);			// toy light map
+	}
+	else {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[14]);
 	}
 	g_pLeftRoomWalls[7]->Draw();
 	if (g_bGardenHit) {
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[7]);			// garden light map
 	}
+	else {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[14]);
+	}
 	g_pRightRoomWalls[5]->Draw();
 	if (g_bDiamondHit) {
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[8]);			// diamond light map
+	}
+	else {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[14]);
 	}
 	g_pRightRoomWalls[7]->Draw();
 
@@ -1042,7 +1068,7 @@ void GL_Display( void )
 	//-----------------------------------
 
 	glBindTexture(GL_TEXTURE_2D, 0);
-	g_pLight->Draw();
+	//g_pLight->Draw();
 
 	//-----------------------------------
 
@@ -1067,21 +1093,26 @@ void GL_Display( void )
 	if (g_bDiamondHit) g_pDiamond_pile->Draw();
 
 	// GEMS
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[5]); // Light Map 
-	if (!g_bSweetHit) g_pGemSweet->Draw();
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[6]); // Light Map
-	if (!g_bToyHit) g_pGemToy->Draw();
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[7]); // Light Map
-	if (!g_bGardenHit) g_pGemGarden->Draw();
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[8]); // Light Map
-	if (!g_bDiamondHit) g_pDiamond->Draw();
+	if (!g_bSweetHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[5]); // Light Map 
+		g_pGemSweet->Draw();
+	}
+	if (!g_bToyHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[6]); // Light Map
+		g_pGemToy->Draw();
+	}
+	if (!g_bGardenHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[7]); // Light Map
+		g_pGemGarden->Draw();
+	}
+	if (!g_bDiamondHit) {
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_uiFTexID[8]); // Light Map
+		g_pDiamond->Draw();
+	}
 
 	glActiveTexture(GL_TEXTURE0);							// 火焰
 	glBindTexture(GL_TEXTURE_2D, g_uiFTexID[13]);
@@ -1102,18 +1133,42 @@ void GL_Display( void )
 // Part 2 : for single light source
 void UpdateLightPosition(float dt)
 {
-	mat4 mxT;
-	// 每秒繞 Y 軸轉 90 度
-	g_fElapsedTime += dt;
-	g_fLightTheta = g_fElapsedTime*(float)M_PI_2;
-	if( g_fLightTheta >= (float)M_PI*2.0f ) {
-		g_fLightTheta -= (float)M_PI*2.0f;
-		g_fElapsedTime -= 4.0f;
-	}
-	g_Light_main.position.x = g_fLightRadius * cosf(g_fLightTheta);
-	g_Light_main.position.z = g_fLightRadius * sinf(g_fLightTheta);
-	mxT = Translate(g_Light_main.position);
-	g_pLight->SetTRSMatrix(mxT);
+	float speed = 2.f;
+	_fBWAngle_Track += speed * dt;
+	if (_fBWAngle_Track > 360) _fBWAngle_Track -= 360; //歸零
+
+	float sint, cost, sin2t, cos2t, cos3t, cos4t, sin12t, sin5t2, cos9t2; //---------定義----------
+	sint = sinf(_fBWAngle_Track);				sin2t = sinf(2 * _fBWAngle_Track);
+	cost = cosf(_fBWAngle_Track);				cos2t = cosf(2 * _fBWAngle_Track);
+	cos3t = cosf(3 * _fBWAngle_Track);			cos4t = cosf(4 * _fBWAngle_Track);
+	sin5t2 = sinf(5 * _fBWAngle_Track / 2.f);	cos9t2 = cosf(9 * _fBWAngle_Track / 2.f);
+	float fsize = 0.05f;
+	_fMT[0] = cost * (sint + sin5t2); _fMT[1] = sint * (sint + sin5t2) + 10.f;
+	g_Light_main.position.x = _fMT[0];
+	g_Light_main.position.y = _fMT[1];
+	_mxMT = Translate(g_Light_main.position);
+	g_pLight->SetTRSMatrix(_mxMT);
+	//HEART
+	//x = 16 * sint*sint*sint
+	//y = 13 * cost - 5 * cos2t - 2 * cos3t - cos4t
+	//FLOWER
+	//x = 15 * cost * sin2t  (15 : scale)
+	//y = 15 * sint * sin2t
+	//BUTTERFLY
+	//x = sint*(expf(cost) - 2 * cos4t - powf(sin12t, 5))
+	//y = cost*(expf(cost) - 2 * cos4t - powf(sin12t, 5))
+	//UNTITLED 2
+	//x = cost * sint * sin5t2
+	//y = sint * sint * sin5t2
+
+
+	// for billboard
+	g_CameraPos = vec4(g_eye.x, 0, g_eye.z, 0);	// 鏡頭xz位置
+	g_ViewDir = g_BillboardPos - g_CameraPos;	// 計算鏡頭方向
+	g_ViewDir = normalize(g_ViewDir);
+	if (g_CameraPos.x < 0) g_fBillboardTheta = -180.f + 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));	// billboard 旋轉角
+	else g_fBillboardTheta = 180.f - 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));
+	g_pFire->SetTRSMatrix(_mxMT * RotateY(g_fBillboardTheta) * RotateX(90.f) * Scale(3.f, 3.f, 3.f));
 }
 //----------------------------------------------------------------------------
 
@@ -1128,14 +1183,22 @@ void onFrameMove(float delta)
 	auto camera = CCamera::getInstance();
 	camera->updateViewLookAt(g_eye, g_at);
 
-	// for billboard
-	g_CameraPos = vec4(g_eye.x, 0, g_eye.z, 0);	// 鏡頭xz位置
-	g_ViewDir = g_BillboardPos - g_CameraPos;	// 計算鏡頭方向
-	g_ViewDir = normalize(g_ViewDir);
-	if (g_CameraPos.x < 0) g_fBillboardTheta = -180.f + 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));	// billboard 旋轉角
-	else g_fBillboardTheta = 180.f - 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));
-	g_pFire->SetTRSMatrix(Translate(0.f, 5.f, -3.f) * RotateY(g_fBillboardTheta) * RotateX(90.f) * Scale(3.f, 3.f, 3.f));
+	//---------------------------------------------------------------
 
+	if (g_bAutoRotating) { // Part 2 : 重新計算 Light 的位置
+		UpdateLightPosition(delta);
+	}
+	else {
+		// for billboard
+		g_CameraPos = vec4(g_eye.x, 0, g_eye.z, 0);	// 鏡頭xz位置
+		g_ViewDir = g_BillboardPos - g_CameraPos;	// 計算鏡頭方向
+		g_ViewDir = normalize(g_ViewDir);
+		if (g_CameraPos.x < 0) g_fBillboardTheta = -180.f + 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));	// billboard 旋轉角
+		else g_fBillboardTheta = 180.f - 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));
+		g_pFire->SetTRSMatrix(Translate(0.f, 10.f, -3.f) * RotateY(g_fBillboardTheta) * RotateX(90.f) * Scale(3.f, 3.f, 3.f));
+	}
+
+	//---------------------------------------------------------------
 	// for gun
 	g_pGun->SetTRSMatrix(	Translate(g_eye) * RotateY(g_fPhi*60.f) * RotateX((g_fTheta + 1.5f)*60.f) *						//玩家位置/視角
 							Translate(0.5f, -1.4f, -2.8f) * RotateY(5.f) * RotateX(5.f) * Scale(0.3f, 0.3f, 0.3f));			//槍枝位置/轉角/大小
@@ -1166,10 +1229,57 @@ void onFrameMove(float delta)
 		}
 	}
 
-	//---------------------------------------------------------------
+	// 子彈射擊偵測
+	if (g_bShooting) {	// 子彈發射中
+		//g_pBullet->GetTRSMatrix();
+	}
 
-	if( g_bAutoRotating ) { // Part 2 : 重新計算 Light 的位置
-		UpdateLightPosition(delta);
+	//---------------------------------------------------------------
+	// 火焰變化
+	if (g_bSweetHit) {		//擊中紅水晶
+		if (!_bSetOnce_sweet) {
+			_bSetOnce_sweet = true;
+			g_fLightR = 0.95f;							// light
+			g_Light_main.diffuse.x = g_fLightR;
+			g_pLight->SetColor(g_Light_main.diffuse);
+			g_pFire->SetLightMapColor(vec4(g_fLightR, g_fLightG, g_fLightB, 0.8f));		//fire
+			g_pFire->SetShader();
+		}
+	}
+	if (g_bToyHit) {		//擊中藍水晶
+		if (!_bSetOnce_toy) {
+			_bSetOnce_toy = true;
+			g_fLightB = 0.95f;							// light
+			g_Light_main.diffuse.z = g_fLightB;
+			g_pLight->SetColor(g_Light_main.diffuse);
+			g_pFire->SetLightMapColor(vec4(g_fLightR, g_fLightG, g_fLightB, 0.8f));		//fire
+			g_pFire->SetShader();
+		}
+	}
+	if (g_bGardenHit) {		//擊中綠水晶
+		if (!_bSetOnce_garden) {
+			_bSetOnce_garden = true;
+			g_fLightG = 0.95f;							// light
+			g_Light_main.diffuse.y = g_fLightG;
+			g_pLight->SetColor(g_Light_main.diffuse);
+			g_pFire->SetLightMapColor(vec4(g_fLightR, g_fLightG, g_fLightB, 0.8f));		//fire
+			g_pFire->SetShader();
+		}
+	}
+	if (g_bDiamondHit) {	//擊中紫水晶
+		g_bAutoRotating = true;
+	}
+
+	//---------------------------------------------------------------
+	// 開門偵測
+
+	if (g_bSweetHit && g_bToyHit && g_bGardenHit && g_bDiamondHit) {	// 大門
+		mat4 mxT, mxS;
+		vec4 vT;
+		vT.x = -FLOOR_SCALE / 12.0f; vT.y = FLOOR_SCALE / 3.0f - 2.6f; vT.z = -FLOOR_SCALE / 2.0f + FLOOR_SCALE / 12.0f;
+		mxT = Translate(vT);
+		mxS = Scale(FLOOR_SCALE / 6.0f, 0.5f, FLOOR_SCALE / 3.0f - 0.4f);
+		g_pBigDoor->SetTRSMatrix(mxT * RotateY(-90.0f) * RotateX(90.0f) * mxS);
 	}
 
 	//---------------------------------------------------------------
@@ -1307,56 +1417,56 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		if (   g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
-			&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE 
-			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE 
-			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
-		{
+		//if (   g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
+		//	&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE 
+		//	&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE 
+		//	&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		//{
 			g_fCameraMoveX += (g_matMoveDir._m[0][3] * WALKING_SPEED);
 			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * WALKING_SPEED);
-		}
+		//}
 		break;
 	case 'S':
 	case 's':
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		if (   g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
-			&& g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
-			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
-			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
-		{	
+		//if (   g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
+		//	&& g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
+		//	&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
+		//	&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		//{
 			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * WALKING_SPEED);
 			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * WALKING_SPEED);
-		}
+		//}
 		break;
 	case 'A':
 	case 'a':
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		if (   g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE					//限制空間
-			&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
-			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
-			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
-		{	
+		//if (   g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE					//限制空間
+		//	&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
+		//	&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
+		//	&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		//{	
 			g_fCameraMoveX += (g_matMoveDir._m[0][3] * WALKING_SPEED);
 			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * WALKING_SPEED);
-		}
+		//}
 		break;
 	case 'D':
 	case 'd':
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		if (   g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE					//限制空間
-			&& g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
-			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
-			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
-		{	
+		//if (   g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE					//限制空間
+		//	&& g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
+		//	&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
+		//	&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		//{	
 			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * WALKING_SPEED);
 			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * WALKING_SPEED);
-		}
+		//}
 		break;
 
 		// --------- for light color ---------
