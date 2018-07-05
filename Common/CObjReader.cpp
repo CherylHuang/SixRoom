@@ -287,3 +287,8 @@ void CObjReader::Update(float dt)
 		m_bViewUpdated = m_bTRSUpdated = false;
 	}
 }
+
+mat4& CObjReader::GetTRSMatrix()
+{
+	return(m_mxTRS);
+}

@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Common\CBullet.cpp" />
     <ClCompile Include="Common\CCamera.cpp" />
     <ClCompile Include="Common\CChecker.cpp" />
     <ClCompile Include="Common\CLineSegment.cpp" />
@@ -98,6 +99,7 @@
     <ClCompile Include="SixRoom.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Common\CBullet.h" />
     <ClInclude Include="Common\CCamera.h" />
     <ClInclude Include="Common\CChecker.h" />
     <ClInclude Include="Common\CLineSegment.h" />

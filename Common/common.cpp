@@ -17,6 +17,7 @@ double g_fprev;
 Timer g_Timer;
 
 extern void onFrameMove(float delta);
+extern void onFrameMoveBullet(float delta);
 
 /*
 unsigned int g_iScore;
@@ -73,6 +74,7 @@ void IdleProcess()
 	if( g_ckStart == -1 ) {
 		g_fprev = g_ckStart = g_Timer.getElapsedTimeInMilliSec(); //clock(); //開始計時
 		onFrameMove(0);
+		onFrameMoveBullet(0);
 	}
 	else {
 		ckNow = g_Timer.getElapsedTimeInMilliSec();
@@ -85,6 +87,7 @@ void IdleProcess()
 		delta = (float)((ckNow - g_fprev)/1000.0); // 計算間隔的時間
 		g_fprev = ckNow; // 記錄這次的時間，當成前一次的時間
 		onFrameMove(delta);
+		onFrameMoveBullet(delta);
 		//printf("%d\n",g_ifps);
 	}
 	glutPostRedisplay(); // 呼叫 Rendering 更新螢幕

@@ -1,39 +1,32 @@
-#ifndef COBJREADER_H
-#define COBJREADER_H
+#ifndef CBULLET_H
+#define CBULLET_H
 #include "../header/Angel.h"
 #include "CShape.h"
 
 typedef Angel::vec4  color4;
 typedef Angel::vec4  point4;
 
-//#define QUAD_NUM 6		// 2 faces, 2 triangles/face 
-
-class CObjReader : public CShape
+class CBullet : public CShape
 {
 private:
-	vec4 *_vec4Points;			//戈翴 (vec4)
-	vec3 *_vec3Points_n;		//戈翴 (vec3)
-	vec3 *_vec3Points_uv;		//戈翴 (vec3)
+	GLfloat m_fRadius;
+	GLint m_iSlices, m_iStacks;
 
 public:
-	CObjReader(char *);
-	~CObjReader();
+	CBullet(const GLfloat fRadius = 1.0f, const int iSlices = 12, const  int iStacks = 6);
+	~CBullet();
+	CBullet *link;		//for link list
 	mat4& GetTRSMatrix();
 
-	void Update(float dt, point4 vLightPos, color4 vLightI);
-	void Update(float dt, const LightSource &Lights);	//方
+	void Update(float dt, const LightSource &lights);	//方
 	void Update(float dt, const LightSource &Lights, const LightSource &Lights2);	//ㄢ方
 	void Update(float dt, const LightSource &Lights, const LightSource &Lights2, const LightSource &Lights3);	//方
 	void Update(float dt, const LightSource &Lights, const LightSource &Lights2, const LightSource &Lights3, const LightSource &Lights4);	//方
 	void Update(float dt); // ぃ璸衡方酚
 
-	void RenderWithFlatShading(const LightSource &Lights);
-	void RenderWithGouraudShading(const LightSource &Lights);
-
+	void RenderWithGouraudShading(const LightSource &lights);
 	void Draw();
-	void DrawW();
-
-
+	void DrawW(); // ㊣ぃΩ砞﹚ Shader 磞酶よΑ
 };
 
 #endif

@@ -17,6 +17,7 @@
 #include "Common/CTexturePool.h"
 #include "png_loader.h"
 #include "Common/CObjReader.h"
+#include "Common/CBullet.h"
 
 #define SPACE_KEY 32
 #define SCREEN_SIZE 800
@@ -26,7 +27,10 @@
 #define GRID_SIZE 20 // must be an even number
 
 #define FLOOR_SCALE 60.f
-#define WALKING_SPACE (FLOOR_SCALE/2 - 5.0f)	//行走範圍
+#define WALKING_SPACE (FLOOR_SCALE/2 - 6.5f)	//行走範圍
+#define WALKING_SPEED 0.3f
+#define BULLET_NUM 10				//子彈數量
+#define BULLET_SPEED 75.f			//子彈速度
 
 
 // For Model View and Projection Matrix
@@ -51,7 +55,14 @@ CQuad			*g_pFire;
 CSolidSphere	*g_pSphere, *g_pSkyBox;
 
 // for hitting
-bool g_bSweetHit, g_bToyHit, g_bGardenHit, g_bDiamondHit;
+bool			g_bSweetHit, g_bToyHit, g_bGardenHit, g_bDiamondHit;
+
+// for bullet
+CBullet			*g_pBullet;
+bool			g_bShooting = false;
+vec3			g_vShootDir;			//子彈發射方向
+mat4			g_mxBulletPos;
+float			g_fCount_bullet = 0;	//子彈間隔時間計時
 
 // For View Point
 GLfloat g_fRadius = 8.0;
@@ -151,7 +162,7 @@ LightSource g_Light_main = {
 	color4(g_fLightR, g_fLightG, g_fLightB, 1.0f), // ambient 
 	color4(g_fLightR, g_fLightG, g_fLightB, 1.0f), // diffuse
 	color4(g_fLightR, g_fLightG, g_fLightB, 1.0f), // specular
-	point4(6.0f, 5.0f, 0.0f, 1.0f),   // position
+	point4(6.0f, 10.0f, 0.0f, 1.0f),   // position
 	point4(0.0f, 0.0f, 0.0f, 1.0f),   // halfVector
 	vec3(0.0f, 0.0f, 0.0f),			  //spotDirection
 	2.0f,	// spotExponent(parameter e); cos^(e)(phi) 
@@ -350,6 +361,21 @@ void init( void )
 	g_pSphere->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 1), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	g_pSphere->SetKaKdKsShini(0, 0.8f, 0.5f, 1);
 	g_pSphere->SetColor(vec4(0.9f, 0.9f, 0.9f, 1.0f));
+
+
+	//子彈
+	g_pBullet = new CBullet(1.0f, 24, 12);
+	g_pBullet->SetTextureLayer(DIFFUSE_MAP);
+	g_pBullet->SetShader();
+	vT.x = 0.f; vT.y = 0.0f; vT.z = 0.0f;
+	mxT = Translate(vT);
+	mxT._m[0][0] = mxT._m[1][1] = mxT._m[2][2] = 1.0f;	//Scale
+	g_pBullet->SetTRSMatrix(mxT);
+	g_pBullet->SetShadingMode(GOURAUD_SHADING);
+	// 設定貼圖
+	g_pBullet->SetMaterials(vec4(0), vec4(0.85f, 0.85f, 0.85f, 1), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	g_pBullet->SetKaKdKsShini(0, 0.8f, 0.5f, 1);
+	g_pBullet->SetColor(vec4(0.9f, 0.9f, 0.9f, 1.0f));
 
 	//----------------------------------------------------------------------
 
@@ -590,6 +616,8 @@ void init( void )
 	g_pSkyBox->SetProjectionMatrix(mpx);
 	g_pSphere->SetProjectionMatrix(mpx);
 	g_pLight->SetProjectionMatrix(mpx);
+
+	if(g_pBullet != NULL) g_pBullet->SetProjectionMatrix(mpx);
 
 	g_pStairs->SetProjectionMatrix(mpx);
 	g_pBigDoor->SetProjectionMatrix(mpx);
@@ -1024,6 +1052,7 @@ void GL_Display( void )
 	glBindTexture(GL_TEXTURE_CUBE_MAP, g_uiSphereCubeMap);	// 與 Light Map 結合
 	g_pSphere->Draw();
 	for (int i = 0; i < 3; i++) g_pFences[i]->Draw();		//圍欄
+	if (g_pBullet != NULL && g_bShooting) g_pBullet->Draw();				//子彈
 
 	glDepthMask(GL_FALSE);	//---------------------------------------  關閉深度測試
 	g_pSkyBox->Draw();	//天空
@@ -1110,6 +1139,32 @@ void onFrameMove(float delta)
 	// for gun
 	g_pGun->SetTRSMatrix(	Translate(g_eye) * RotateY(g_fPhi*60.f) * RotateX((g_fTheta + 1.5f)*60.f) *						//玩家位置/視角
 							Translate(0.5f, -1.4f, -2.8f) * RotateY(5.f) * RotateX(5.f) * Scale(0.3f, 0.3f, 0.3f));			//槍枝位置/轉角/大小
+	// for bullet
+	if (!g_bShooting) {	//子彈未發射
+		g_pBullet->SetTRSMatrix(Translate(g_eye) * RotateY(g_fPhi*60.f) * RotateX((g_fTheta + 1.5f)*60.f) *						//玩家位置/視角
+								Translate(0.5f, -1.4f, -2.8f) * RotateY(5.f) * RotateX(5.f) * Scale(0.1f, 0.1f, 0.1f) *			//槍枝位置/轉角/大小
+								Translate(0.0f, 7.f, -40.f));																	//槍口位置
+		//g_vShootDir
+		mat4  mxA = Translate(g_eye) * RotateY(g_fPhi*60.f) * RotateX((g_fTheta + 1.5f)*60.f) *	
+					Translate(0.5f, -1.4f, -2.8f) * RotateY(5.f) * RotateX(5.f) * Scale(0.1f, 0.1f, 0.1f) *	
+					Translate(0.0f, 7.f, -20.f);
+		g_mxBulletPos = g_pBullet->GetTRSMatrix();
+		mat4  mxDir = g_mxBulletPos - mxA;
+		g_vShootDir = vec3(mxDir._m[0][3], mxDir._m[1][3], mxDir._m[2][3]);
+		g_vShootDir = normalize(g_vShootDir);
+	}
+	else {				//子彈發射
+		g_fCount_bullet += delta;
+		g_pBullet->SetTRSMatrix(g_mxBulletPos);
+		g_mxBulletPos._m[0][3] += g_vShootDir.x * delta * BULLET_SPEED;		// x
+		g_mxBulletPos._m[1][3] += g_vShootDir.y * delta * BULLET_SPEED;		// y
+		g_mxBulletPos._m[2][3] += g_vShootDir.z * delta * BULLET_SPEED;		// z
+
+		if (g_fCount_bullet > 0.4f) {
+			g_fCount_bullet = 0;
+			g_bShooting = false;
+		}
+	}
 
 	//---------------------------------------------------------------
 
@@ -1167,6 +1222,7 @@ void onFrameMove(float delta)
 		g_pDiamond_pile->SetViewMatrix(mvx);
 
 		g_pGun->SetViewMatrix(mvx);
+		if (g_pBullet != NULL) g_pBullet->SetViewMatrix(mvx);
 	}
 
 	// 如果需要重新計算時，在這邊計算每一個物件的顏色
@@ -1230,6 +1286,7 @@ void onFrameMove(float delta)
 	g_pDiamond_pile->Update(delta, g_Light_main, g_Light_right2);
 
 	g_pGun->Update(delta, g_Light_main);		// 槍
+	if (g_pBullet != NULL) g_pBullet->Update(delta, g_Light_main);
 
 	GL_Display();
 }
@@ -1250,68 +1307,56 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		//if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE)  
-		//{	
-			g_fCameraMoveX += (g_matMoveDir._m[0][3] * 0.2f);	//限制空間
-			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * 0.2f);
-		//}
-		//else {	// 修正卡牆
-		//	if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
-		//	else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
-		//	if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
-		//	else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
-		//}
+		if (   g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
+			&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE 
+			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE 
+			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		{
+			g_fCameraMoveX += (g_matMoveDir._m[0][3] * WALKING_SPEED);
+			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * WALKING_SPEED);
+		}
 		break;
 	case 'S':
 	case 's':
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		//if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) 
-		//{	
-			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * 0.2f);	//限制空間
-			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * 0.2f);
-		//}
-		//else {	// 修正卡牆
-		//	if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
-		//	else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
-		//	if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
-		//	else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
-		//}
+		if (   g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
+			&& g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
+			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
+			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		{	
+			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * WALKING_SPEED);
+			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * WALKING_SPEED);
+		}
 		break;
 	case 'A':
 	case 'a':
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		//if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) 
-		//{	
-			g_fCameraMoveX += (g_matMoveDir._m[0][3] * 0.2f);	//限制空間
-			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * 0.2f);
-		//}
-		//else {	// 修正卡牆
-		//	if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
-		//	else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
-		//	if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
-		//	else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
-		//}
+		if (   g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE					//限制空間
+			&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
+			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
+			&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		{	
+			g_fCameraMoveX += (g_matMoveDir._m[0][3] * WALKING_SPEED);
+			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * WALKING_SPEED);
+		}
 		break;
 	case 'D':
 	case 'd':
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = RotateY(90.f) * Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		//if (g_fCameraMoveX <= WALKING_SPACE && g_fCameraMoveX >= -WALKING_SPACE && g_fCameraMoveZ <= WALKING_SPACE && g_fCameraMoveZ >= -WALKING_SPACE) 
-		//{	
-			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * 0.2f);	//限制空間
-			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * 0.2f);
-		//}
-		//else {	// 修正卡牆
-		//	if (g_fCameraMoveX > WALKING_SPACE) g_fCameraMoveX = WALKING_SPACE;
-		//	else if (g_fCameraMoveX < -WALKING_SPACE) g_fCameraMoveX = -WALKING_SPACE;
-		//	if (g_fCameraMoveZ > WALKING_SPACE) g_fCameraMoveZ = WALKING_SPACE;
-		//	else if (g_fCameraMoveZ < -WALKING_SPACE) g_fCameraMoveZ = -WALKING_SPACE;
-		//}
+		if (   g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE					//限制空間
+			&& g_fCameraMoveX - (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
+			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
+			&& g_fCameraMoveZ - (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+		{	
+			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * WALKING_SPEED);
+			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * WALKING_SPEED);
+		}
 		break;
 
 		// --------- for light color ---------
@@ -1373,6 +1418,7 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		delete g_pGemSweet, g_pGemToy, g_pGemGarden, g_pDiamond;
 		delete g_pGemSweet_pile, g_pGemToy_pile, g_pGemGarden_pile, g_pDiamond_pile;
 		delete g_pGun;
+		if (g_pBullet != NULL) delete g_pBullet;
 
 		CCamera::getInstance()->destroyInstance();
 		CTexturePool::getInstance()->destroyInstance();
@@ -1390,6 +1436,8 @@ void Win_Mouse(int button, int state, int x, int y) {
 				g_bToyHit = !g_bToyHit;
 				g_bGardenHit = !g_bGardenHit;
 				g_bDiamondHit = !g_bDiamondHit;
+				
+				g_bShooting = true;		// 發射子彈
 			}
 			break;
 		case GLUT_MIDDLE_BUTTON:  // 目前按下的是滑鼠中鍵 ，換成 Y 軸
