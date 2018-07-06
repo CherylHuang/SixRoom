@@ -64,14 +64,18 @@ vec3			g_vShootDir;			//子彈發射方向
 mat4			g_mxBulletPos;
 float			g_fCount_bullet = 0;	//子彈間隔時間計時
 
+// 子彈碰撞偵測
+vec3			g_vSweetGemPos, g_vToyGemPos, g_vGardenGemPos, g_vDiamondGemPos;
+
 // for light changing
-GLfloat	_fBWAngle_Track;
-float	_fMT[3] = { 0 };
-mat4	_mxMT;					//for main object translation
-bool	_bSetOnce_sweet, _bSetOnce_toy, _bSetOnce_garden;
+GLfloat			g_fBWAngle_Track;
+float			g_fMT[3] = { 0 };
+mat4			g_mxMT;					//for main object translation
+bool			g_bSetOnce_sweet, g_bSetOnce_toy, g_bSetOnce_garden;
 
 // for doors
 mat4	g_mxBigDoorPos;
+float	g_fRot0, g_fRot1, g_fRot2, g_fRot3;			//旋轉角
 
 // For View Point
 GLfloat g_fRadius = 8.0;
@@ -259,7 +263,8 @@ void init( void )
 	srand((unsigned)time(NULL));
 
 	g_bSweetHit = g_bToyHit = g_bGardenHit = g_bDiamondHit = false;		// 擊中狀態
-	_bSetOnce_sweet = _bSetOnce_toy = _bSetOnce_garden = false;			// 擊中後設定一次
+	g_bSetOnce_sweet = g_bSetOnce_toy = g_bSetOnce_garden = false;			// 擊中後設定一次
+	g_fRot0 = g_fRot1 = g_fRot2 = g_fRot3 = 0.f;		//旋轉角
 
 	mat4 mxT, mxS;
 	vec4 vT;
@@ -448,6 +453,7 @@ void init( void )
 	g_pGemSweet->SetKaKdKsShini(0.15f, 0.95f, 0.5f, 5);
 	g_pGemSweet->SetShader();
 	vT.x = -FLOOR_SCALE * 0.75f; vT.y = 1.5f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : LR1
+	g_vSweetGemPos = vec3(vT.x, vT.y, vT.z);	// 紀錄初始位置
 	mxT = Translate(vT);
 	vS.x = vS.y = vS.z = 0.7f;				//Scale
 	mxS = Scale(vS);
@@ -463,6 +469,7 @@ void init( void )
 	g_pGemToy->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
 	g_pGemToy->SetShader();
 	vT.x = -FLOOR_SCALE * 0.75f; vT.y = 0.0f; vT.z = FLOOR_SCALE / 4.0f;	//Location : LR2
+	g_vToyGemPos = vec3(vT.x, vT.y, vT.z);	// 紀錄初始位置
 	mxT = Translate(vT);
 	vS.x = vS.y = vS.z = 0.7f;				//Scale
 	mxS = Scale(vS);
@@ -478,6 +485,7 @@ void init( void )
 	g_pGemGarden->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
 	g_pGemGarden->SetShader();
 	vT.x = FLOOR_SCALE * 0.75f; vT.y = 1.5f; vT.z = -FLOOR_SCALE / 4.0f;	//Location : RR1
+	g_vGardenGemPos = vec3(vT.x, vT.y, vT.z);	// 紀錄初始位置
 	mxT = Translate(vT);
 	vS.x = vS.y = vS.z = 0.7f;				//Scale
 	mxS = Scale(vS);
@@ -493,6 +501,7 @@ void init( void )
 	g_pDiamond->SetKaKdKsShini(0.15f, 0.95f, 0.95f, 5);
 	g_pDiamond->SetShader();
 	vT.x = FLOOR_SCALE * 0.75f; vT.y = 1.0f; vT.z = FLOOR_SCALE / 4.0f;	//Location : RR2
+	g_vDiamondGemPos = vec3(vT.x, vT.y, vT.z);	// 紀錄初始位置
 	mxT = Translate(vT);
 	vS.x = vS.y = vS.z = 0.35f;				//Scale
 	mxS = Scale(vS);
@@ -1068,7 +1077,7 @@ void GL_Display( void )
 	//-----------------------------------
 
 	glBindTexture(GL_TEXTURE_2D, 0);
-	//g_pLight->Draw();
+	//g_pLight->Draw();///////////////////////////////////////////////////
 
 	//-----------------------------------
 
@@ -1134,20 +1143,20 @@ void GL_Display( void )
 void UpdateLightPosition(float dt)
 {
 	float speed = 2.f;
-	_fBWAngle_Track += speed * dt;
-	if (_fBWAngle_Track > 360) _fBWAngle_Track -= 360; //歸零
+	g_fBWAngle_Track += speed * dt;
+	if (g_fBWAngle_Track > 360) g_fBWAngle_Track -= 360; //歸零
 
 	float sint, cost, sin2t, cos2t, cos3t, cos4t, sin12t, sin5t2, cos9t2; //---------定義----------
-	sint = sinf(_fBWAngle_Track);				sin2t = sinf(2 * _fBWAngle_Track);
-	cost = cosf(_fBWAngle_Track);				cos2t = cosf(2 * _fBWAngle_Track);
-	cos3t = cosf(3 * _fBWAngle_Track);			cos4t = cosf(4 * _fBWAngle_Track);
-	sin5t2 = sinf(5 * _fBWAngle_Track / 2.f);	cos9t2 = cosf(9 * _fBWAngle_Track / 2.f);
+	sint = sinf(g_fBWAngle_Track);				sin2t = sinf(2 * g_fBWAngle_Track);
+	cost = cosf(g_fBWAngle_Track);				cos2t = cosf(2 * g_fBWAngle_Track);
+	cos3t = cosf(3 * g_fBWAngle_Track);			cos4t = cosf(4 * g_fBWAngle_Track);
+	sin5t2 = sinf(5 * g_fBWAngle_Track / 2.f);	cos9t2 = cosf(9 * g_fBWAngle_Track / 2.f);
 	float fsize = 0.05f;
-	_fMT[0] = cost * (sint + sin5t2); _fMT[1] = sint * (sint + sin5t2) + 10.f;
-	g_Light_main.position.x = _fMT[0];
-	g_Light_main.position.y = _fMT[1];
-	_mxMT = Translate(g_Light_main.position);
-	g_pLight->SetTRSMatrix(_mxMT);
+	g_fMT[0] = cost * (sint + sin5t2); g_fMT[1] = sint * (sint + sin5t2) + 10.f;
+	g_Light_main.position.x = g_fMT[0];
+	g_Light_main.position.y = g_fMT[1];
+	g_mxMT = Translate(g_Light_main.position);
+	g_pLight->SetTRSMatrix(g_mxMT);
 	//HEART
 	//x = 16 * sint*sint*sint
 	//y = 13 * cost - 5 * cos2t - 2 * cos3t - cos4t
@@ -1168,7 +1177,7 @@ void UpdateLightPosition(float dt)
 	g_ViewDir = normalize(g_ViewDir);
 	if (g_CameraPos.x < 0) g_fBillboardTheta = -180.f + 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));	// billboard 旋轉角
 	else g_fBillboardTheta = 180.f - 60.f * acos(dot(g_BillboardNormalDir, g_ViewDir));
-	g_pFire->SetTRSMatrix(_mxMT * RotateY(g_fBillboardTheta) * RotateX(90.f) * Scale(3.f, 3.f, 3.f));
+	g_pFire->SetTRSMatrix(g_mxMT * RotateY(g_fBillboardTheta) * RotateX(90.f) * Scale(3.f, 3.f, 3.f));
 }
 //----------------------------------------------------------------------------
 
@@ -1231,14 +1240,35 @@ void onFrameMove(float delta)
 
 	// 子彈射擊偵測
 	if (g_bShooting) {	// 子彈發射中
-		//g_pBullet->GetTRSMatrix();
+		mat4 mxB = g_pBullet->GetTRSMatrix();
+		vec3 vB = vec3(mxB._m[0][3], mxB._m[1][3], mxB._m[2][3]);
+		if (vB.x < g_vSweetGemPos.x + 5.f && vB.x > g_vSweetGemPos.x - 5.f &&
+			vB.y < g_vSweetGemPos.y + 5.f && vB.y > g_vSweetGemPos.y - 5.f &&
+			vB.z < g_vSweetGemPos.z + 5.f && vB.z > g_vSweetGemPos.z - 5.f ) {
+			g_bSweetHit = true;			// 紅水晶
+		}
+		if (vB.x < g_vToyGemPos.x + 5.f && vB.x > g_vToyGemPos.x - 5.f &&
+			vB.y < g_vToyGemPos.y + 8.f && vB.y > g_vToyGemPos.y - 5.f &&
+			vB.z < g_vToyGemPos.z + 5.f && vB.z > g_vToyGemPos.z - 5.f) {
+			g_bToyHit = true;			// 藍水晶
+		}
+		if (vB.x < g_vGardenGemPos.x + 5.f && vB.x > g_vGardenGemPos.x - 5.f &&
+			vB.y < g_vGardenGemPos.y + 5.f && vB.y > g_vGardenGemPos.y - 5.f &&
+			vB.z < g_vGardenGemPos.z + 5.f && vB.z > g_vGardenGemPos.z - 5.f) {
+			g_bGardenHit = true;		// 綠水晶
+		}
+		if (vB.x < g_vDiamondGemPos.x + 5.f && vB.x > g_vDiamondGemPos.x - 5.f &&
+			vB.y < g_vDiamondGemPos.y + 5.f && vB.y > g_vDiamondGemPos.y - 5.f &&
+			vB.z < g_vDiamondGemPos.z + 5.f && vB.z > g_vDiamondGemPos.z - 5.f) {
+			g_bDiamondHit = true;		// 紫水晶
+		}
 	}
 
 	//---------------------------------------------------------------
 	// 火焰變化
 	if (g_bSweetHit) {		//擊中紅水晶
-		if (!_bSetOnce_sweet) {
-			_bSetOnce_sweet = true;
+		if (!g_bSetOnce_sweet) {
+			g_bSetOnce_sweet = true;
 			g_fLightR = 0.95f;							// light
 			g_Light_main.diffuse.x = g_fLightR;
 			g_pLight->SetColor(g_Light_main.diffuse);
@@ -1247,8 +1277,8 @@ void onFrameMove(float delta)
 		}
 	}
 	if (g_bToyHit) {		//擊中藍水晶
-		if (!_bSetOnce_toy) {
-			_bSetOnce_toy = true;
+		if (!g_bSetOnce_toy) {
+			g_bSetOnce_toy = true;
 			g_fLightB = 0.95f;							// light
 			g_Light_main.diffuse.z = g_fLightB;
 			g_pLight->SetColor(g_Light_main.diffuse);
@@ -1257,8 +1287,8 @@ void onFrameMove(float delta)
 		}
 	}
 	if (g_bGardenHit) {		//擊中綠水晶
-		if (!_bSetOnce_garden) {
-			_bSetOnce_garden = true;
+		if (!g_bSetOnce_garden) {
+			g_bSetOnce_garden = true;
 			g_fLightG = 0.95f;							// light
 			g_Light_main.diffuse.y = g_fLightG;
 			g_pLight->SetColor(g_Light_main.diffuse);
@@ -1280,6 +1310,38 @@ void onFrameMove(float delta)
 		mxT = Translate(vT);
 		mxS = Scale(FLOOR_SCALE / 6.0f, 0.5f, FLOOR_SCALE / 3.0f - 0.4f);
 		g_pBigDoor->SetTRSMatrix(mxT * RotateY(-90.0f) * RotateX(90.0f) * mxS);
+	}
+	if (g_eye.x < -17.f && g_eye.z < -12.f) {			// LR1
+		if(g_fRot0 < 90.f) g_fRot0 += delta * 150.0f;
+		g_pDoors[0]->SetTRSMatrix(  Translate(-FLOOR_SCALE / 2.0f, 0.5f, -FLOOR_SCALE / 4.0f - FLOOR_SCALE / 6.0f + 0.3f) *
+									RotateY(90.f) *
+									RotateY(g_fRot0) *
+									Translate(-FLOOR_SCALE / 12.0f, 0.0f, FLOOR_SCALE / 12.0f - 0.7f) *
+									Scale(0.8f, 0.8f, 0.8f));
+	}
+	if (g_eye.x < -17.f && g_eye.z > 12.f) {			// LR2
+		if (g_fRot1 < 90.f) g_fRot1 += delta * 150.0f;
+		g_pDoors[1]->SetTRSMatrix(  Translate(-FLOOR_SCALE / 2.0f, 0.5f, FLOOR_SCALE / 4.0f + FLOOR_SCALE / 6.0f - 0.3f) *
+									RotateY(-90.f) *
+									RotateY(-g_fRot1) *
+									Translate(-FLOOR_SCALE / 12.0f, 0.0f, -FLOOR_SCALE / 12.0f + 0.7f) *
+									Scale(0.8f, 0.8f, 0.8f));
+	}
+	if (g_eye.x > 17.f && g_eye.z < -12.f) {			// RR1
+		if (g_fRot2 < 90.f) g_fRot2 += delta * 150.0f;
+		g_pDoors[2]->SetTRSMatrix(  Translate(FLOOR_SCALE / 2.0f, 0.5f, -FLOOR_SCALE / 4.0f - FLOOR_SCALE / 6.0f + 0.3f) *
+									RotateY(90.f) *
+									RotateY(-g_fRot2) *
+									Translate(-FLOOR_SCALE / 12.0f, 0.0f, -FLOOR_SCALE / 12.0f + 0.7f) *
+									Scale(0.8f, 0.8f, 0.8f));
+	}
+	if (g_eye.x > 17.f && g_eye.z > 12.f) {				// RR2
+		if (g_fRot3 < 90.f) g_fRot3 += delta * 150.0f;
+		g_pDoors[3]->SetTRSMatrix(	Translate(FLOOR_SCALE / 2.0f, 0.5f, FLOOR_SCALE / 4.0f + FLOOR_SCALE / 6.0f - 0.3f) *
+									RotateY(-90.f) *
+									RotateY(g_fRot3) *
+									Translate(-FLOOR_SCALE / 12.0f, 0.0f, FLOOR_SCALE / 12.0f - 0.7f) *
+									Scale(0.8f, 0.8f, 0.8f));
 	}
 
 	//---------------------------------------------------------------
@@ -1542,10 +1604,10 @@ void Win_Mouse(int button, int state, int x, int y) {
 	switch(button) {
 		case GLUT_LEFT_BUTTON:   // 目前按下的是滑鼠左鍵
 			if (state == GLUT_DOWN) {
-				g_bSweetHit = !g_bSweetHit;
-				g_bToyHit = !g_bToyHit;
-				g_bGardenHit = !g_bGardenHit;
-				g_bDiamondHit = !g_bDiamondHit;
+				//g_bSweetHit = !g_bSweetHit;
+				//g_bToyHit = !g_bToyHit;
+				//g_bGardenHit = !g_bGardenHit;
+				//g_bDiamondHit = !g_bDiamondHit;
 				
 				g_bShooting = true;		// 發射子彈
 			}
