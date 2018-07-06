@@ -76,6 +76,7 @@ bool			g_bSetOnce_sweet, g_bSetOnce_toy, g_bSetOnce_garden;
 // for doors
 mat4	g_mxBigDoorPos;
 float	g_fRot0, g_fRot1, g_fRot2, g_fRot3;			//旋轉角
+bool	g_bInLR1, g_bInLR2, g_bInRR1, g_bInRR2;		//是否在房間內
 
 // For View Point
 GLfloat g_fRadius = 8.0;
@@ -265,6 +266,7 @@ void init( void )
 	g_bSweetHit = g_bToyHit = g_bGardenHit = g_bDiamondHit = false;		// 擊中狀態
 	g_bSetOnce_sweet = g_bSetOnce_toy = g_bSetOnce_garden = false;			// 擊中後設定一次
 	g_fRot0 = g_fRot1 = g_fRot2 = g_fRot3 = 0.f;		//旋轉角
+	g_bInLR1 = g_bInLR2 = g_bInRR1 = g_bInRR2 = false;	//是否在房間內
 
 	mat4 mxT, mxS;
 	vec4 vT;
@@ -1311,7 +1313,9 @@ void onFrameMove(float delta)
 		mxS = Scale(FLOOR_SCALE / 6.0f, 0.5f, FLOOR_SCALE / 3.0f - 0.4f);
 		g_pBigDoor->SetTRSMatrix(mxT * RotateY(-90.0f) * RotateX(90.0f) * mxS);
 	}
+	//printf("%f, %f\n", g_eye.x, g_eye.z);
 	if (g_eye.x < -17.f && g_eye.z < -12.f) {			// LR1
+		g_bInLR1 = true;
 		if(g_fRot0 < 90.f) g_fRot0 += delta * 150.0f;
 		g_pDoors[0]->SetTRSMatrix(  Translate(-FLOOR_SCALE / 2.0f, 0.5f, -FLOOR_SCALE / 4.0f - FLOOR_SCALE / 6.0f + 0.3f) *
 									RotateY(90.f) *
@@ -1319,7 +1323,9 @@ void onFrameMove(float delta)
 									Translate(-FLOOR_SCALE / 12.0f, 0.0f, FLOOR_SCALE / 12.0f - 0.7f) *
 									Scale(0.8f, 0.8f, 0.8f));
 	}
+	else g_bInLR1 = false;
 	if (g_eye.x < -17.f && g_eye.z > 12.f) {			// LR2
+		g_bInLR2 = true;
 		if (g_fRot1 < 90.f) g_fRot1 += delta * 150.0f;
 		g_pDoors[1]->SetTRSMatrix(  Translate(-FLOOR_SCALE / 2.0f, 0.5f, FLOOR_SCALE / 4.0f + FLOOR_SCALE / 6.0f - 0.3f) *
 									RotateY(-90.f) *
@@ -1327,7 +1333,9 @@ void onFrameMove(float delta)
 									Translate(-FLOOR_SCALE / 12.0f, 0.0f, -FLOOR_SCALE / 12.0f + 0.7f) *
 									Scale(0.8f, 0.8f, 0.8f));
 	}
+	else g_bInLR2 = false;
 	if (g_eye.x > 17.f && g_eye.z < -12.f) {			// RR1
+		g_bInRR1 = true;
 		if (g_fRot2 < 90.f) g_fRot2 += delta * 150.0f;
 		g_pDoors[2]->SetTRSMatrix(  Translate(FLOOR_SCALE / 2.0f, 0.5f, -FLOOR_SCALE / 4.0f - FLOOR_SCALE / 6.0f + 0.3f) *
 									RotateY(90.f) *
@@ -1335,7 +1343,9 @@ void onFrameMove(float delta)
 									Translate(-FLOOR_SCALE / 12.0f, 0.0f, -FLOOR_SCALE / 12.0f + 0.7f) *
 									Scale(0.8f, 0.8f, 0.8f));
 	}
+	else g_bInRR1 = false;
 	if (g_eye.x > 17.f && g_eye.z > 12.f) {				// RR2
+		g_bInRR2 = true;
 		if (g_fRot3 < 90.f) g_fRot3 += delta * 150.0f;
 		g_pDoors[3]->SetTRSMatrix(	Translate(FLOOR_SCALE / 2.0f, 0.5f, FLOOR_SCALE / 4.0f + FLOOR_SCALE / 6.0f - 0.3f) *
 									RotateY(-90.f) *
@@ -1343,6 +1353,7 @@ void onFrameMove(float delta)
 									Translate(-FLOOR_SCALE / 12.0f, 0.0f, FLOOR_SCALE / 12.0f - 0.7f) *
 									Scale(0.8f, 0.8f, 0.8f));
 	}
+	else g_bInRR2 = false;
 
 	//---------------------------------------------------------------
 
@@ -1479,14 +1490,33 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		g_MoveDir = vec4(g_fRadius*sin(g_fTheta)*sin(g_fPhi), 0.f, g_fRadius*sin(g_fTheta)*cos(g_fPhi), 1.f);
 		g_MoveDir = normalize(g_MoveDir);
 		g_matMoveDir = Translate(g_MoveDir.x, 0.f, g_MoveDir.z);
-		//if (   g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
-		//	&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE 
-		//	&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE 
-		//	&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
-		//{
+		if (g_bSweetHit && g_bToyHit && g_bGardenHit && g_bDiamondHit) {
 			g_fCameraMoveX += (g_matMoveDir._m[0][3] * WALKING_SPEED);
 			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * WALKING_SPEED);
-		//}
+			if (g_eye.z < -9.f && g_eye.z > -20.f && g_eye.x < 4.f && g_eye.x > -4.f) {		// 階梯上
+				g_fCameraMoveY += 0.5f * WALKING_SPEED;
+			}
+		}
+		else if (!g_bInLR1 && !g_bInLR2 && !g_bInRR1 && !g_bInRR2) {		// 不在任何一個房間內
+			if (g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) <= WALKING_SPACE				//限制空間
+				&& g_fCameraMoveX + (g_matMoveDir._m[0][3] * WALKING_SPEED) >= -WALKING_SPACE
+				&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) <= WALKING_SPACE
+				&& g_fCameraMoveZ + (g_matMoveDir._m[2][3] * WALKING_SPEED) >= -WALKING_SPACE)
+			{
+				g_fCameraMoveX += (g_matMoveDir._m[0][3] * WALKING_SPEED);
+				g_fCameraMoveZ += (g_matMoveDir._m[2][3] * WALKING_SPEED);
+				if (g_eye.z < -9.f && g_eye.z > -20.f && g_eye.x < 4.f && g_eye.x > -4.f) {		// 階梯上
+					g_fCameraMoveY += 0.5f * WALKING_SPEED;
+				}
+			}
+		}
+		else {
+			g_fCameraMoveX += (g_matMoveDir._m[0][3] * WALKING_SPEED);
+			g_fCameraMoveZ += (g_matMoveDir._m[2][3] * WALKING_SPEED);
+			if (g_eye.z < -9.f && g_eye.z > -20.f && g_eye.x < 4.f && g_eye.x > -4.f) {		// 階梯上
+				g_fCameraMoveY += 0.5f * WALKING_SPEED;
+			}
+		}
 		break;
 	case 'S':
 	case 's':
@@ -1500,6 +1530,9 @@ void Win_Keyboard( unsigned char key, int x, int y )
 		//{
 			g_fCameraMoveX -= (g_matMoveDir._m[0][3] * WALKING_SPEED);
 			g_fCameraMoveZ -= (g_matMoveDir._m[2][3] * WALKING_SPEED);
+			if (g_eye.z < -9.f && g_eye.z > -20.f && g_eye.x < 4.f && g_eye.x > -4.f) {		// 階梯上
+				g_fCameraMoveY -= 0.5f * WALKING_SPEED;
+			}
 		//}
 		break;
 	case 'A':
