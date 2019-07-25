@@ -1,2 +1,2 @@
 # SixRoom
-OpenGL project
+OpenGL project, see more: https://youtu.be/NfYsy6IBLyE
